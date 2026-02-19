@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Plus, Trash2, ShoppingBag, Clock, Calendar, ArrowUpRight, Search, Filter } from 'lucide-react';
 import { FinanceData, OutgoingItem, FrequencyType } from '../types';
 import { CATEGORIES } from '../constants';
+import { addOutgoing, deleteOutgoing } from '../client/src/lib/api';
 
 interface OutgoingsTrackerProps {
   data: FinanceData;
@@ -19,27 +20,35 @@ const OutgoingsTracker: React.FC<OutgoingsTrackerProps> = ({ data, setData }) =>
     frequency: 'Monthly' as FrequencyType
   });
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!newItem.description || !newItem.amount) return;
     const cleanAmount = parseFloat(newItem.amount.replace(/[^0-9.]/g, ''));
     if (isNaN(cleanAmount)) return;
 
-    const item: OutgoingItem = {
-      id: Math.random().toString(36).substr(2, 9),
-      description: newItem.description,
-      amount: cleanAmount,
-      category: newItem.category,
-      date: newItem.date,
-      frequency: newItem.frequency
-    };
+    try {
+      const item = await addOutgoing({
+        description: newItem.description,
+        amount: cleanAmount,
+        category: newItem.category,
+        date: newItem.date,
+        frequency: newItem.frequency
+      });
 
-    setData(prev => ({ ...prev, outgoings: [...prev.outgoings, item] }));
-    setShowAdd(false);
-    setNewItem({ description: '', amount: '', category: CATEGORIES.OUTGOINGS[0], date: new Date().toISOString().split('T')[0], frequency: 'Monthly' });
+      setData(prev => ({ ...prev, outgoings: [...prev.outgoings, item] }));
+      setShowAdd(false);
+      setNewItem({ description: '', amount: '', category: CATEGORIES.OUTGOINGS[0], date: new Date().toISOString().split('T')[0], frequency: 'Monthly' });
+    } catch (error) {
+      console.error('Failed to add outgoing:', error);
+    }
   };
 
-  const removeOutgoing = (id: string) => {
-    setData(prev => ({ ...prev, outgoings: prev.outgoings.filter(i => i.id !== id) }));
+  const removeOutgoing = async (id: string) => {
+    try {
+      await deleteOutgoing(id);
+      setData(prev => ({ ...prev, outgoings: prev.outgoings.filter(i => i.id !== id) }));
+    } catch (error) {
+      console.error('Failed to delete outgoing:', error);
+    }
   };
 
   return (

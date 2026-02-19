@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, Heart, PiggyBank, GripVertical, AlarmClock, Calendar, ArrowUpCircle } from 'lucide-react';
 import { FinanceData, WishlistItem } from '../types';
+import { addWishlistItem, deleteWishlistItem, updateWishlistItem } from '../client/src/lib/api';
 
 interface WishlistTrackerProps {
   data: FinanceData;
@@ -25,40 +26,58 @@ const WishlistTracker: React.FC<WishlistTrackerProps> = ({ data, setData }) => {
     return isNaN(parsed) ? 0 : parsed;
   };
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!newItem.item) return;
     
-    const item: WishlistItem = {
-      id: Math.random().toString(36).substr(2, 9),
+    const itemToAdd = {
       item: newItem.item,
       cost: cleanNumber(newItem.cost),
       saved: cleanNumber(newItem.saved),
-      priority: 'Medium',
+      priority: 'Medium' as const,
       deadline: newItem.deadline || undefined
     };
 
-    setData(prev => ({ ...prev, wishlist: [item, ...prev.wishlist] }));
-    setShowAdd(false);
-    setNewItem({ item: '', cost: '', saved: '', deadline: '' });
+    try {
+      const serverItem = await addWishlistItem(itemToAdd);
+      setData(prev => ({ ...prev, wishlist: [serverItem, ...prev.wishlist] }));
+      setShowAdd(false);
+      setNewItem({ item: '', cost: '', saved: '', deadline: '' });
+    } catch (error) {
+      console.error('Failed to add wishlist item:', error);
+    }
   };
 
-  const removeWish = (id: string) => {
-    setData(prev => ({ ...prev, wishlist: prev.wishlist.filter(i => i.id !== id) }));
+  const removeWish = async (id: string) => {
+    try {
+      await deleteWishlistItem(id);
+      setData(prev => ({ ...prev, wishlist: prev.wishlist.filter(i => i.id !== id) }));
+    } catch (error) {
+      console.error('Failed to delete wishlist item:', error);
+    }
   };
 
-  const handleDeposit = (id: string) => {
+  const handleDeposit = async (id: string) => {
     const amountStr = pendingWishlistDeposits[id];
     if (!amountStr) return;
     
     const amount = cleanNumber(amountStr);
     if (amount <= 0) return;
 
-    setData(prev => ({
-      ...prev,
-      wishlist: prev.wishlist.map(w => w.id === id ? { ...w, saved: Math.min(w.cost, w.saved + amount) } : w)
-    }));
+    const existingItem = data.wishlist.find(w => w.id === id);
+    if (!existingItem) return;
 
-    setPendingWishlistDeposits(prev => ({ ...prev, [id]: '' }));
+    const newSaved = Math.min(existingItem.cost, existingItem.saved + amount);
+
+    try {
+      const updatedItem = await updateWishlistItem(id, { ...existingItem, saved: newSaved });
+      setData(prev => ({
+        ...prev,
+        wishlist: prev.wishlist.map(w => w.id === id ? updatedItem : w)
+      }));
+      setPendingWishlistDeposits(prev => ({ ...prev, [id]: '' }));
+    } catch (error) {
+      console.error('Failed to update wishlist item:', error);
+    }
   };
 
   const handleDragStart = (index: number) => {

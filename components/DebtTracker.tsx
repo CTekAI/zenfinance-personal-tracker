@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, CreditCard, Percent, Activity, Calendar, ShieldAlert, ArrowDownCircle, GripVertical } from 'lucide-react';
 import { FinanceData, DebtItem } from '../types';
+import { addDebt, updateDebt, deleteDebt } from '../client/src/lib/api';
 
 interface DebtTrackerProps {
   data: FinanceData;
@@ -27,11 +28,10 @@ const DebtTracker: React.FC<DebtTrackerProps> = ({ data, setData }) => {
     return isNaN(parsed) ? 0 : parsed;
   };
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!newItem.name || !newItem.balance) return;
     
-    const item: DebtItem = {
-      id: Math.random().toString(36).substr(2, 9),
+    const itemData: Omit<DebtItem, 'id'> = {
       name: newItem.name,
       balance: cleanNumber(newItem.balance),
       interestRate: cleanNumber(newItem.interestRate),
@@ -40,35 +40,54 @@ const DebtTracker: React.FC<DebtTrackerProps> = ({ data, setData }) => {
       deadline: newItem.deadline || undefined
     };
 
-    setData(prev => ({ ...prev, debt: [...prev.debt, item] }));
-    setShowAdd(false);
-    setNewItem({ 
-      name: '', 
-      balance: '', 
-      interestRate: '', 
-      minPayment: '', 
-      priority: 'Medium', 
-      deadline: '' 
-    });
+    try {
+      const serverItem = await addDebt(itemData);
+      setData(prev => ({ ...prev, debt: [...prev.debt, serverItem] }));
+      setShowAdd(false);
+      setNewItem({ 
+        name: '', 
+        balance: '', 
+        interestRate: '', 
+        minPayment: '', 
+        priority: 'Medium', 
+        deadline: '' 
+      });
+    } catch (error) {
+      console.error('Failed to add debt:', error);
+    }
   };
 
-  const handlePayment = (id: string) => {
+  const handlePayment = async (id: string) => {
     const amountStr = pendingPayments[id];
     if (!amountStr) return;
     
     const amount = cleanNumber(amountStr);
     if (amount <= 0) return;
 
-    setData(prev => ({
-      ...prev,
-      debt: prev.debt.map(d => d.id === id ? { ...d, balance: Math.max(0, d.balance - amount) } : d)
-    }));
+    const existingItem = data.debt.find(d => d.id === id);
+    if (!existingItem) return;
 
-    setPendingPayments(prev => ({ ...prev, [id]: '' }));
+    const newBalance = Math.max(0, existingItem.balance - amount);
+
+    try {
+      await updateDebt(id, { ...existingItem, balance: newBalance });
+      setData(prev => ({
+        ...prev,
+        debt: prev.debt.map(d => d.id === id ? { ...d, balance: newBalance } : d)
+      }));
+      setPendingPayments(prev => ({ ...prev, [id]: '' }));
+    } catch (error) {
+      console.error('Failed to update debt:', error);
+    }
   };
 
-  const removeDebt = (id: string) => {
-    setData(prev => ({ ...prev, debt: prev.debt.filter(i => i.id !== id) }));
+  const removeDebt = async (id: string) => {
+    try {
+      await deleteDebt(id);
+      setData(prev => ({ ...prev, debt: prev.debt.filter(i => i.id !== id) }));
+    } catch (error) {
+      console.error('Failed to delete debt:', error);
+    }
   };
 
   const handleDragStart = (index: number) => {

@@ -2,13 +2,17 @@
 
 ## Overview
 
-ZenFinance is a client-side personal finance tracking application built with React and TypeScript. It provides a dashboard-driven interface for managing income, expenses, savings, debt, and wishlists. The app includes an AI financial advisor powered by Google's Gemini API that provides personalized financial guidance based on the user's data.
+ZenFinance is a full-stack personal finance tracking application built with React, TypeScript, and Express. It provides a dashboard-driven interface for managing income, expenses, savings, debt, and wishlists. The app includes user authentication via Replit Auth and an AI financial advisor powered by Google's Gemini API.
 
-All financial data is persisted in the browser's localStorage — there is no backend server or database. The app is built with Vite and uses Tailwind CSS (loaded via CDN) for styling.
+Financial data is persisted in a PostgreSQL database with per-user isolation. Authentication supports Google, GitHub, Apple, and email/password sign-in via Replit's OpenID Connect integration.
 
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+
+## Recent Changes
+
+- **Feb 2026**: Added user authentication (Replit Auth) and migrated from localStorage to PostgreSQL database. Each user now has their own isolated financial data. Added landing page for logged-out users.
 
 ## System Architecture
 
@@ -16,63 +20,91 @@ Preferred communication style: Simple, everyday language.
 - **Framework**: React 19 with TypeScript, bundled by Vite
 - **Styling**: Tailwind CSS loaded via CDN (`cdn.tailwindcss.com`), plus a custom `index.css` file. Font is Inter from Google Fonts.
 - **Routing**: No router library — tab-based navigation managed via React state (`activeTab`). Tabs include Dashboard, Income, Expenses, Savings, Debt, Wishlist, and AI Advisor.
-- **State Management**: All finance data lives in a single `FinanceData` state object in `App.tsx`, passed down as props to child components. No external state management library.
-- **Data Persistence**: localStorage under the key `zenfinance_data`. Data is loaded on mount and saved on every change via a `useEffect`.
+- **State Management**: All finance data lives in a single `FinanceData` state object in `App.tsx`, passed down as props to child components. Auth state managed via `useAuth` hook from `@tanstack/react-query`.
+- **Data Persistence**: PostgreSQL database via Express API. Data is loaded on login via `GET /api/finance` and updated per-operation via individual CRUD endpoints.
 - **Charts**: Recharts library for data visualization (pie charts on the Dashboard).
 - **Icons**: Lucide React icon library.
 
+### Backend Architecture
+- **Server**: Express on port 3001, proxied by Vite dev server on port 5000
+- **Database**: PostgreSQL (Neon-backed) via Drizzle ORM
+- **Authentication**: Replit Auth (OpenID Connect) with Passport.js, session-based auth stored in PostgreSQL
+- **API**: RESTful CRUD endpoints under `/api/finance/*`, all protected by `isAuthenticated` middleware
+
 ### File Structure
-- `App.tsx` — Root component with sidebar navigation and tab switching
-- `index.tsx` — React DOM entry point
-- `types.ts` — TypeScript interfaces for all data models (IncomeItem, OutgoingItem, DebtItem, SavingsItem, WishlistItem, FinanceData)
-- `constants.ts` — Category lists and seed/initial data
+- `App.tsx` — Root component with auth gating, sidebar navigation, and tab switching
+- `index.tsx` — React DOM entry point with QueryClientProvider
+- `types.ts` — TypeScript interfaces for all data models
+- `constants.ts` — Category lists
 - `components/` — One component per tab:
+  - `LandingPage.tsx` — Landing page for logged-out users
   - `Dashboard.tsx` — Overview with summary cards and spending pie chart
-  - `IncomeTracker.tsx` — CRUD for income sources
-  - `OutgoingsTracker.tsx` — CRUD for expenses
-  - `SavingsTracker.tsx` — Savings accounts with deposit functionality and progress toward targets
-  - `DebtTracker.tsx` — Debt tracking with payments, interest rates, and drag-to-reorder
-  - `WishlistTracker.tsx` — Wishlist items with saving progress and drag-to-reorder
+  - `IncomeTracker.tsx` — CRUD for income sources (API-backed)
+  - `OutgoingsTracker.tsx` — CRUD for expenses (API-backed)
+  - `SavingsTracker.tsx` — Savings accounts with deposit functionality (API-backed)
+  - `DebtTracker.tsx` — Debt tracking with payments (API-backed)
+  - `WishlistTracker.tsx` — Wishlist items with saving progress (API-backed)
   - `AIAdvisor.tsx` — Chat interface with Gemini AI
+- `server/` — Backend:
+  - `index.ts` — Express server entry point
+  - `routes.ts` — All finance CRUD API routes
+  - `db.ts` — Database connection (Drizzle + Neon)
+  - `replit_integrations/auth/` — Replit Auth module (DO NOT MODIFY)
+- `shared/` — Shared between client and server:
+  - `schema.ts` — Re-exports all Drizzle schemas
+  - `models/auth.ts` — Users and sessions tables
+  - `models/finance.ts` — Finance data tables (income, outgoings, savings, debt, wishlist)
+- `client/src/` — Client utilities:
+  - `hooks/use-auth.ts` — React hook for auth state
+  - `lib/api.ts` — API helper functions for all CRUD operations
+  - `lib/auth-utils.ts` — Auth error handling utilities
 
-### Data Model
-The `FinanceData` type contains five arrays:
-- `income: IncomeItem[]` — source, amount, category, frequency
-- `outgoings: OutgoingItem[]` — description, amount, category, date, frequency
-- `savings: SavingsItem[]` — name, balance, optional target, category
-- `debt: DebtItem[]` — name, balance, interest rate, min payment, priority, optional deadline
-- `wishlist: WishlistItem[]` — item name, cost, saved amount, priority, optional deadline
-
-Frequency types: Monthly, Weekly, Bi-Weekly, Yearly, One-time.
+### Database Schema
+PostgreSQL tables (all finance tables include `userId` for per-user isolation):
+- `users` — Replit Auth user accounts
+- `sessions` — Session storage for auth
+- `income` — Income sources (source, amount, category, frequency)
+- `outgoings` — Expenses (description, amount, category, date, frequency)
+- `savings` — Savings accounts (name, balance, target, category)
+- `debt` — Debt items (name, balance, interest rate, min payment, priority, deadline)
+- `wishlist` — Wishlist items (item, cost, saved, priority, deadline)
 
 ### Build & Dev Setup
-- **Vite** dev server runs on port 5000, host `0.0.0.0`
-- Path alias `@/*` maps to project root
-- Environment variables: `GEMINI_API_KEY` is loaded from `.env.local` and exposed to client code via Vite's `define` config as both `process.env.API_KEY` and `process.env.GEMINI_API_KEY`
-- The `index.html` also has an importmap for ESM imports (used for the non-bundled CDN version), but the Vite build uses npm packages directly
+- **Vite** dev server runs on port 5000, host `0.0.0.0`, proxies `/api` to Express on port 3001
+- **Express** API server runs on port 3001
+- Both started concurrently via `npm run dev` using `concurrently`
+- Path aliases: `@/*` maps to project root, `@shared/*` maps to `shared/`
+- Database migrations: `npm run db:push` (Drizzle Kit)
+- Environment variables: `GEMINI_API_KEY` in `.env.local`, `DATABASE_URL` and `SESSION_SECRET` from Replit
 
 ### Key Design Decisions
-1. **No backend/database**: All data is client-side in localStorage. This keeps the app simple but means no cross-device sync. If adding a backend later, the `FinanceData` interface defines the complete schema.
-2. **Single state object**: Rather than separate state for each financial category, everything is in one `FinanceData` object. This makes it easy to serialize/deserialize and pass to the AI advisor as context.
-3. **AI runs client-side**: The Gemini API is called directly from the browser using `@google/genai`. The API key is embedded at build time. This means the key is exposed in the client bundle — a backend proxy would be more secure for production.
-4. **Tailwind via CDN**: Not using PostCSS/Tailwind build pipeline. This simplifies setup but means no custom Tailwind config or purging.
+1. **Per-user database storage**: All financial data is stored in PostgreSQL with `userId` column for isolation. Each user only sees their own data.
+2. **Replit Auth**: Authentication via OpenID Connect. No custom login forms — users click "Sign In" which redirects to `/api/login`.
+3. **Single state object**: Finance data is fetched as one `FinanceData` object and passed to components. Individual CRUD operations call the API and update local state.
+4. **AI runs client-side**: The Gemini API is called directly from the browser. The API key is embedded at build time.
+5. **Tailwind via CDN**: Not using PostCSS/Tailwind build pipeline.
 
 ## External Dependencies
 
 ### NPM Packages
 - `react` / `react-dom` (v19) — UI framework
-- `recharts` (v3.7) — Charting library for dashboard visualizations
+- `@tanstack/react-query` — Server state management (auth hook)
+- `recharts` (v3.7) — Charting library
 - `lucide-react` (v0.563) — Icon library
-- `@google/genai` (v1.39) — Google Generative AI SDK for Gemini integration
+- `@google/genai` (v1.39) — Google Gemini AI SDK
+- `express` (v5) — Backend server
+- `drizzle-orm` / `drizzle-kit` — Database ORM and migrations
+- `@neondatabase/serverless` — PostgreSQL driver
+- `passport` / `openid-client` — Authentication
+- `express-session` / `connect-pg-simple` — Session management
+- `concurrently` — Run multiple scripts
+- `tsx` — TypeScript execution for server
 - `vite` (v6.2) + `@vitejs/plugin-react` — Build tooling
-- `typescript` (v5.8) — Type checking
 
 ### External APIs
-- **Google Gemini API** (`gemini-3-flash-preview` model) — Powers the AI financial advisor chat. Requires `GEMINI_API_KEY` environment variable set in `.env.local`. The full user financial data is sent as context with each message.
+- **Google Gemini API** — Powers the AI financial advisor chat
+- **Replit Auth** — OpenID Connect authentication provider
 
 ### CDN Resources
 - Tailwind CSS via `cdn.tailwindcss.com`
 - Inter font from Google Fonts
-
-### No Database
-There is no database. All persistence is via browser localStorage. If a database is needed in the future, the `FinanceData` interface in `types.ts` serves as the schema definition.

@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Plus, Trash2, PiggyBank, ArrowUpCircle, TrendingUp } from 'lucide-react';
 import { FinanceData, SavingsItem } from '../types';
 import { CATEGORIES } from '../constants';
+import { addSavings, updateSavings, deleteSavings } from '../client/src/lib/api';
 
 interface SavingsTrackerProps {
   data: FinanceData;
@@ -25,32 +26,54 @@ const SavingsTracker: React.FC<SavingsTrackerProps> = ({ data, setData }) => {
     return isNaN(parsed) ? 0 : parsed;
   };
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!newItem.name || !newItem.balance) return;
-    const item: SavingsItem = {
-      id: Math.random().toString(36).substr(2, 9),
+    const item = {
       name: newItem.name,
       balance: cleanNumber(newItem.balance),
       target: newItem.target ? cleanNumber(newItem.target) : undefined,
       category: newItem.category
     };
 
-    setData(prev => ({ ...prev, savings: [...prev.savings, item] }));
-    setShowAdd(false);
-    setNewItem({ name: '', balance: '', target: '', category: CATEGORIES.SAVINGS[0] });
+    try {
+      const savedItem = await addSavings(item);
+      setData(prev => ({ ...prev, savings: [...prev.savings, savedItem] }));
+      setShowAdd(false);
+      setNewItem({ name: '', balance: '', target: '', category: CATEGORIES.SAVINGS[0] });
+    } catch (error) {
+      console.error('Failed to add savings item:', error);
+    }
   };
 
-  const handleDeposit = (id: string) => {
+  const handleDeposit = async (id: string) => {
     const amountStr = pendingDeposits[id];
     if (!amountStr) return;
     const amount = cleanNumber(amountStr);
     if (amount <= 0) return;
 
-    setData(prev => ({
-      ...prev,
-      savings: prev.savings.map(s => s.id === id ? { ...s, balance: s.balance + amount } : s)
-    }));
-    setPendingDeposits(prev => ({ ...prev, [id]: '' }));
+    const existingItem = data.savings.find(s => s.id === id);
+    if (!existingItem) return;
+
+    const newBalance = existingItem.balance + amount;
+    try {
+      await updateSavings(id, { ...existingItem, balance: newBalance });
+      setData(prev => ({
+        ...prev,
+        savings: prev.savings.map(s => s.id === id ? { ...s, balance: newBalance } : s)
+      }));
+      setPendingDeposits(prev => ({ ...prev, [id]: '' }));
+    } catch (error) {
+      console.error('Failed to update savings balance:', error);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteSavings(id);
+      setData(prev => ({ ...prev, savings: prev.savings.filter(s => s.id !== id) }));
+    } catch (error) {
+      console.error('Failed to delete savings item:', error);
+    }
   };
 
   const totalSavings = data.savings.reduce((sum, s) => sum + s.balance, 0);
@@ -144,7 +167,7 @@ const SavingsTracker: React.FC<SavingsTrackerProps> = ({ data, setData }) => {
                   </div>
                 </div>
                 <button 
-                  onClick={() => setData(prev => ({ ...prev, savings: prev.savings.filter(s => s.id !== item.id) }))}
+                  onClick={() => handleDelete(item.id)}
                   className="text-slate-200 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all p-2"
                 >
                   <Trash2 className="w-5 h-5" />

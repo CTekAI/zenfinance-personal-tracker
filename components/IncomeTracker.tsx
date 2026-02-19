@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Plus, Trash2, Wallet, ArrowUpRight, PlusCircle } from 'lucide-react';
 import { FinanceData, IncomeItem, FrequencyType } from '../types';
 import { CATEGORIES } from '../constants';
+import { addIncome, deleteIncome } from '../client/src/lib/api';
 
 interface IncomeTrackerProps {
   data: FinanceData;
@@ -26,32 +27,41 @@ const IncomeTracker: React.FC<IncomeTrackerProps> = ({ data, setData }) => {
     return isNaN(parsed) ? 0 : parsed;
   };
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!newItem.source || !newItem.amount) return;
     
     const finalCategory = isCustomCategory ? newItem.customCategory : newItem.category;
-    const item: IncomeItem = {
-      id: Math.random().toString(36).substr(2, 9),
+    const itemData = {
       source: newItem.source,
       amount: cleanNumber(newItem.amount),
       category: finalCategory,
       frequency: newItem.frequency
     };
 
-    setData(prev => ({ ...prev, income: [...prev.income, item] }));
-    setShowAdd(false);
-    setIsCustomCategory(false);
-    setNewItem({ 
-      source: '', 
-      amount: '', 
-      category: CATEGORIES.INCOME[0], 
-      customCategory: '',
-      frequency: 'Monthly' 
-    });
+    try {
+      const item = await addIncome(itemData);
+      setData(prev => ({ ...prev, income: [...prev.income, item] }));
+      setShowAdd(false);
+      setIsCustomCategory(false);
+      setNewItem({ 
+        source: '', 
+        amount: '', 
+        category: CATEGORIES.INCOME[0], 
+        customCategory: '',
+        frequency: 'Monthly' 
+      });
+    } catch (error) {
+      console.error('Failed to add income:', error);
+    }
   };
 
-  const removeIncome = (id: string) => {
-    setData(prev => ({ ...prev, income: prev.income.filter(i => i.id !== id) }));
+  const removeIncome = async (id: string) => {
+    try {
+      await deleteIncome(id);
+      setData(prev => ({ ...prev, income: prev.income.filter(i => i.id !== id) }));
+    } catch (error) {
+      console.error('Failed to delete income:', error);
+    }
   };
 
   return (

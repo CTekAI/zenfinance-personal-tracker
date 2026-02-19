@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   LayoutDashboard, 
   Wallet, 
@@ -10,10 +9,11 @@ import {
   Menu,
   X,
   PiggyBank,
-  Bell
+  Bell,
+  LogOut,
+  Loader2
 } from 'lucide-react';
 import { FinanceData, TabType } from './types';
-import { INITIAL_DATA } from './constants';
 import Dashboard from './components/Dashboard';
 import IncomeTracker from './components/IncomeTracker';
 import OutgoingsTracker from './components/OutgoingsTracker';
@@ -21,18 +21,72 @@ import DebtTracker from './components/DebtTracker';
 import SavingsTracker from './components/SavingsTracker';
 import WishlistTracker from './components/WishlistTracker';
 import AIAdvisor from './components/AIAdvisor';
+import LandingPage from './components/LandingPage';
+import { useAuth } from './client/src/hooks/use-auth';
+
+const EMPTY_DATA: FinanceData = {
+  income: [],
+  outgoings: [],
+  savings: [],
+  debt: [],
+  wishlist: [],
+};
 
 const App: React.FC = () => {
+  const { user, isLoading: authLoading, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('Dashboard');
-  const [data, setData] = useState<FinanceData>(() => {
-    const saved = localStorage.getItem('zenfinance_data');
-    return saved ? JSON.parse(saved) : INITIAL_DATA;
-  });
+  const [data, setData] = useState<FinanceData>(EMPTY_DATA);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
+
+  const fetchData = useCallback(async () => {
+    try {
+      const res = await fetch('/api/finance', { credentials: 'include' });
+      if (res.ok) {
+        const financeData = await res.json();
+        setData(financeData);
+      }
+    } catch (error) {
+      console.error('Error fetching finance data:', error);
+    } finally {
+      setDataLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    localStorage.setItem('zenfinance_data', JSON.stringify(data));
-  }, [data]);
+    if (isAuthenticated) {
+      fetchData();
+    } else {
+      setDataLoading(false);
+    }
+  }, [isAuthenticated, fetchData]);
+
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#F9FBFC] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 text-slate-400 animate-spin" />
+          <p className="text-slate-400 font-medium">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <LandingPage />;
+  }
+
+  if (dataLoading) {
+    return (
+      <div className="min-h-screen bg-[#F9FBFC] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 text-slate-400 animate-spin" />
+          <p className="text-slate-400 font-medium">Loading your finances...</p>
+        </div>
+      </div>
+    );
+  }
 
   const navItems = [
     { id: 'Dashboard', icon: LayoutDashboard, label: 'Overview' },
@@ -57,9 +111,13 @@ const App: React.FC = () => {
     }
   };
 
+  const displayName = user?.firstName || user?.email || 'User';
+  const initials = user?.firstName 
+    ? (user.firstName[0] + (user.lastName?.[0] || '')).toUpperCase()
+    : (user?.email?.[0] || 'U').toUpperCase();
+
   return (
     <div className="min-h-screen bg-[#F9FBFC] flex">
-      {/* Sidebar - Desktop */}
       <aside className={`
         fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-100 transform transition-transform duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]
         md:relative md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -98,7 +156,15 @@ const App: React.FC = () => {
             ))}
           </nav>
 
-          <div className="mt-10 p-6 bg-slate-50 rounded-[2rem] border border-slate-100">
+          <a
+            href="/api/logout"
+            className="flex items-center space-x-3 px-5 py-4 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-[1.25rem] transition-all duration-300 mt-4"
+          >
+            <LogOut className="w-5 h-5" />
+            <span className="font-bold text-sm tracking-tight">Sign Out</span>
+          </a>
+
+          <div className="mt-6 p-6 bg-slate-50 rounded-[2rem] border border-slate-100">
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-3">Health Score</p>
             <div className="flex items-end justify-between">
               <span className="text-3xl font-black text-slate-900 tracking-tighter">84</span>
@@ -111,9 +177,7 @@ const App: React.FC = () => {
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-        {/* Header */}
         <header className="bg-transparent px-8 pt-8 pb-4 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center space-x-4">
             <button 
@@ -129,14 +193,17 @@ const App: React.FC = () => {
                <Bell className="w-5 h-5" />
              </button>
              <div className="w-12 h-12 rounded-2xl bg-white border border-slate-100 shadow-sm flex items-center justify-center p-1 overflow-hidden">
-                <div className="w-full h-full bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-700 font-bold text-xs">
-                  JD
-                </div>
+                {user?.profileImageUrl ? (
+                  <img src={user.profileImageUrl} alt={displayName} className="w-full h-full rounded-xl object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-700 font-bold text-xs">
+                    {initials}
+                  </div>
+                )}
              </div>
           </div>
         </header>
 
-        {/* Scrollable Content Area */}
         <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
           <div className="max-w-6xl mx-auto pb-10">
             {renderActiveTab()}
