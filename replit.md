@@ -46,9 +46,12 @@ Preferred communication style: Simple, everyday language.
   - `DebtTracker.tsx` — Debt tracking with payments (API-backed)
   - `WishlistTracker.tsx` — Wishlist items with saving progress (API-backed)
   - `AIAdvisor.tsx` — Chat interface with Gemini AI
+  - `Profile.tsx` — User profile (photo upload, name editing, password change)
+  - `AuthModal.tsx` — Sign up/sign in modal for email/password auth
 - `server/` — Backend:
   - `index.ts` — Express server entry point
   - `routes.ts` — All finance CRUD API routes
+  - `auth.ts` — Custom email/password auth routes and profile endpoints
   - `db.ts` — Database connection (Drizzle + Neon)
   - `replit_integrations/auth/` — Replit Auth module (DO NOT MODIFY)
 - `shared/` — Shared between client and server:

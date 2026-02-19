@@ -11,7 +11,8 @@ import {
   PiggyBank,
   Bell,
   LogOut,
-  Loader2
+  Loader2,
+  UserCircle
 } from 'lucide-react';
 import { FinanceData, TabType } from './types';
 import Dashboard from './components/Dashboard';
@@ -21,6 +22,7 @@ import DebtTracker from './components/DebtTracker';
 import SavingsTracker from './components/SavingsTracker';
 import WishlistTracker from './components/WishlistTracker';
 import AIAdvisor from './components/AIAdvisor';
+import Profile from './components/Profile';
 import LandingPage from './components/LandingPage';
 import { useAuth } from './client/src/hooks/use-auth';
 
@@ -96,6 +98,7 @@ const App: React.FC = () => {
     { id: 'Debt', icon: CreditCard, label: 'Debt' },
     { id: 'Wishlist', icon: Heart, label: 'Wishlist' },
     { id: 'AI Advisor', icon: Sparkles, label: 'ZenAI' },
+    { id: 'Profile', icon: UserCircle, label: 'Profile' },
   ];
 
   const renderActiveTab = () => {
@@ -107,6 +110,7 @@ const App: React.FC = () => {
       case 'Debt': return <DebtTracker data={data} setData={setData} />;
       case 'Wishlist': return <WishlistTracker data={data} setData={setData} />;
       case 'AI Advisor': return <AIAdvisor data={data} />;
+      case 'Profile': return user ? <Profile user={user} /> : null;
       default: return <Dashboard data={data} />;
     }
   };
@@ -192,7 +196,10 @@ const App: React.FC = () => {
              <button className="p-3 bg-white border border-slate-100 rounded-2xl shadow-sm text-slate-400 hover:text-slate-900 transition-colors">
                <Bell className="w-5 h-5" />
              </button>
-             <div className="w-12 h-12 rounded-2xl bg-white border border-slate-100 shadow-sm flex items-center justify-center p-1 overflow-hidden">
+             <button
+               onClick={() => setActiveTab('Profile')}
+               className="w-12 h-12 rounded-2xl bg-white border border-slate-100 shadow-sm flex items-center justify-center p-1 overflow-hidden hover:ring-2 hover:ring-slate-900 transition-all"
+             >
                 {user?.profileImageUrl ? (
                   <img src={user.profileImageUrl} alt={displayName} className="w-full h-full rounded-xl object-cover" />
                 ) : (
@@ -200,7 +207,7 @@ const App: React.FC = () => {
                     {initials}
                   </div>
                 )}
-             </div>
+             </button>
           </div>
         </header>
 

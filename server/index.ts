@@ -1,11 +1,13 @@
 import "dotenv/config";
 import express from "express";
+import path from "path";
 import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 import { registerCustomAuthRoutes } from "./auth";
 import { registerRoutes } from "./routes";
 
 const app = express();
 app.use(express.json());
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 (async () => {
   await setupAuth(app);

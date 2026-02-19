@@ -45,7 +45,7 @@ export interface WishlistItem {
   deadline?: string;
 }
 
-export type TabType = 'Dashboard' | 'Income' | 'Outgoings' | 'Savings' | 'Debt' | 'Wishlist' | 'AI Advisor';
+export type TabType = 'Dashboard' | 'Income' | 'Outgoings' | 'Savings' | 'Debt' | 'Wishlist' | 'AI Advisor' | 'Profile';
 
 export interface FinanceData {
   income: IncomeItem[];

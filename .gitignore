@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 migrations
+uploads
 
 # Editor directories and files
 .vscode/*
