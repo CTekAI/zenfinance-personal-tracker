@@ -58,7 +58,7 @@ export function registerAIRoutes(app: Express) {
 Your job is to help everyday people take control of their money.
 Rules:
 - Only give general guidance, never regulated financial advice.
-- Use the same currency symbols that appear in the user's financial data. If no currency is specified, use $.
+- Always display the $ currency symbol before every monetary amount (e.g. $500, $1,200).
 - Be encouraging but realistic.
 - ONLY base your advice on the financial data provided below. Do NOT assume or invent any figures.
 - Always respond with valid JSON in this exact format:
@@ -70,7 +70,7 @@ Rules:
       const userMessage = `Here is my financial snapshot:\n${JSON.stringify(snapshot, null, 2)}\n\nMy question: ${question}`;
 
       const response = await getOpenAI().chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userMessage },
