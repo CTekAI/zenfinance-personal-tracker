@@ -1,5 +1,8 @@
 import type { Express } from "express";
 import { isAuthenticatedCustom } from "./auth";
+import { db } from "./db";
+import { income, outgoings, savings, debt, wishlist } from "@shared/models/finance";
+import { eq } from "drizzle-orm";
 import OpenAI from "openai";
 
 // Using gpt-4o for broad compatibility with user's own OpenAI API key
@@ -11,34 +14,27 @@ function getOpenAI(): OpenAI {
   return openaiClient;
 }
 
-// ──────────────────────────────────────────────────────────────────
-// MOCK DATA HELPER
-// Replace this function with a real DB query using your Drizzle ORM.
-// For example, you could query the income, outgoings, savings, and
-// debt tables for the given userId, exactly like the GET /api/finance
-// route does in server/routes.ts.
-// ──────────────────────────────────────────────────────────────────
-function getMockFinancialSnapshot(userId: string) {
+async function getFinancialSnapshot(userId: string) {
+  const toNum = (v: string | number | null | undefined): number => {
+    if (v == null) return 0;
+    const n = typeof v === "number" ? v : parseFloat(v);
+    return isNaN(n) ? 0 : n;
+  };
+
+  const [incomeData, outgoingsData, savingsData, debtData, wishlistData] = await Promise.all([
+    db.select().from(income).where(eq(income.userId, userId)),
+    db.select().from(outgoings).where(eq(outgoings.userId, userId)),
+    db.select().from(savings).where(eq(savings.userId, userId)),
+    db.select().from(debt).where(eq(debt.userId, userId)),
+    db.select().from(wishlist).where(eq(wishlist.userId, userId)),
+  ]);
+
   return {
-    income: [
-      { source: "Salary", amount: 3200, frequency: "monthly" },
-      { source: "Freelance", amount: 500, frequency: "monthly" },
-    ],
-    fixedExpenses: [
-      { description: "Rent", amount: 950, frequency: "monthly" },
-      { description: "Council Tax", amount: 150, frequency: "monthly" },
-      { description: "Utilities", amount: 120, frequency: "monthly" },
-      { description: "Groceries", amount: 350, frequency: "monthly" },
-      { description: "Transport", amount: 100, frequency: "monthly" },
-    ],
-    debts: [
-      { name: "Student Loan", balance: 24000, apr: 6.3, minPayment: 120 },
-      { name: "Credit Card", balance: 2400, apr: 19.9, minPayment: 60 },
-    ],
-    savings: [
-      { name: "Emergency Fund", balance: 1500, target: 5000 },
-      { name: "Holiday Fund", balance: 800, target: 2000 },
-    ],
+    income: incomeData.map(r => ({ source: r.source, amount: toNum(r.amount), category: r.category, frequency: r.frequency })),
+    expenses: outgoingsData.map(r => ({ description: r.description, amount: toNum(r.amount), category: r.category, frequency: r.frequency })),
+    debts: debtData.map(r => ({ name: r.name, balance: toNum(r.balance), interestRate: toNum(r.interestRate), minPayment: toNum(r.minPayment), priority: r.priority })),
+    savings: savingsData.map(r => ({ name: r.name, balance: toNum(r.balance), target: r.target ? parseFloat(r.target) : undefined, category: r.category })),
+    wishlist: wishlistData.map(r => ({ item: r.item, cost: toNum(r.cost), saved: toNum(r.saved), priority: r.priority })),
   };
 }
 
@@ -56,27 +52,15 @@ export function registerAIRoutes(app: Express) {
         return res.status(500).json({ ok: false, error: "OpenAI API key is not configured." });
       }
 
-      // ──────────────────────────────────────────────────────────────
-      // REPLACE the mock call below with your real DB query, e.g.:
-      //
-      //   const [incomeData, outgoingsData, savingsData, debtData] =
-      //     await Promise.all([
-      //       db.select().from(income).where(eq(income.userId, userId)),
-      //       db.select().from(outgoings).where(eq(outgoings.userId, userId)),
-      //       db.select().from(savings).where(eq(savings.userId, userId)),
-      //       db.select().from(debt).where(eq(debt.userId, userId)),
-      //     ]);
-      //
-      // Then build the snapshot object from those query results.
-      // ──────────────────────────────────────────────────────────────
-      const snapshot = getMockFinancialSnapshot(userId);
+      const snapshot = await getFinancialSnapshot(userId);
 
-      const systemPrompt = `You are ZenAdvisor, a safe, friendly UK-based financial coach.
+      const systemPrompt = `You are ZenAdvisor, a safe, friendly financial coach.
 Your job is to help everyday people take control of their money.
 Rules:
 - Only give general guidance, never regulated financial advice.
-- Refer to amounts in GBP (£).
+- Use the same currency symbols that appear in the user's financial data. If no currency is specified, use $.
 - Be encouraging but realistic.
+- ONLY base your advice on the financial data provided below. Do NOT assume or invent any figures.
 - Always respond with valid JSON in this exact format:
   { "summary": "<one-paragraph overview>", "steps": ["<step 1>", "<step 2>", ...] }
 - The summary should directly address the user's question.
