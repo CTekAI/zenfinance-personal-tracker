@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, PiggyBank, Shield, TrendingUp, BarChart3, LogIn } from 'lucide-react';
+import { Sparkles, PiggyBank, Shield, TrendingUp, BarChart3, LogIn, UserPlus } from 'lucide-react';
 
 const LandingPage: React.FC = () => {
   return (
@@ -12,13 +12,22 @@ const LandingPage: React.FC = () => {
             </div>
             <span className="text-lg font-black text-slate-900 tracking-tighter">ZenFinance</span>
           </div>
-          <a
-            href="/api/login"
-            className="flex items-center space-x-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-colors shadow-lg shadow-slate-200"
-          >
-            <LogIn className="w-4 h-4" />
-            <span>Sign In</span>
-          </a>
+          <div className="flex items-center space-x-3">
+            <a
+              href="/api/login"
+              className="flex items-center space-x-2 px-5 py-2.5 border-2 border-slate-900 text-slate-900 rounded-xl font-bold text-sm hover:bg-slate-50 transition-colors"
+            >
+              <LogIn className="w-4 h-4" />
+              <span>Sign In</span>
+            </a>
+            <a
+              href="/api/login"
+              className="flex items-center space-x-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-colors shadow-lg shadow-slate-200"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>Sign Up</span>
+            </a>
+          </div>
         </div>
       </nav>
 
