@@ -1,11 +1,11 @@
 import type { Express } from "express";
-import { isAuthenticated } from "./replit_integrations/auth";
+import { isAuthenticatedCustom } from "./auth";
 import { db } from "./db";
 import { income, outgoings, savings, debt, wishlist } from "@shared/models/finance";
 import { eq, and } from "drizzle-orm";
 
 export function registerRoutes(app: Express) {
-  app.get("/api/finance", isAuthenticated, async (req: any, res) => {
+  app.get("/api/finance", isAuthenticatedCustom, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const [incomeData, outgoingsData, savingsData, debtData, wishlistData] = await Promise.all([
@@ -33,7 +33,7 @@ export function registerRoutes(app: Express) {
   });
 
   // Income CRUD
-  app.post("/api/finance/income", isAuthenticated, async (req: any, res) => {
+  app.post("/api/finance/income", isAuthenticatedCustom, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { source, amount, category, frequency } = req.body;
@@ -47,7 +47,7 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  app.put("/api/finance/income/:id", isAuthenticated, async (req: any, res) => {
+  app.put("/api/finance/income/:id", isAuthenticatedCustom, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { source, amount, category, frequency } = req.body;
@@ -62,7 +62,7 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  app.delete("/api/finance/income/:id", isAuthenticated, async (req: any, res) => {
+  app.delete("/api/finance/income/:id", isAuthenticatedCustom, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       await db.delete(income).where(and(eq(income.id, req.params.id), eq(income.userId, userId)));
@@ -74,7 +74,7 @@ export function registerRoutes(app: Express) {
   });
 
   // Outgoings CRUD
-  app.post("/api/finance/outgoings", isAuthenticated, async (req: any, res) => {
+  app.post("/api/finance/outgoings", isAuthenticatedCustom, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { description, amount, category, date, frequency } = req.body;
@@ -88,7 +88,7 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  app.put("/api/finance/outgoings/:id", isAuthenticated, async (req: any, res) => {
+  app.put("/api/finance/outgoings/:id", isAuthenticatedCustom, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { description, amount, category, date, frequency } = req.body;
@@ -103,7 +103,7 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  app.delete("/api/finance/outgoings/:id", isAuthenticated, async (req: any, res) => {
+  app.delete("/api/finance/outgoings/:id", isAuthenticatedCustom, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       await db.delete(outgoings).where(and(eq(outgoings.id, req.params.id), eq(outgoings.userId, userId)));
@@ -115,7 +115,7 @@ export function registerRoutes(app: Express) {
   });
 
   // Savings CRUD
-  app.post("/api/finance/savings", isAuthenticated, async (req: any, res) => {
+  app.post("/api/finance/savings", isAuthenticatedCustom, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { name, balance, target, category } = req.body;
@@ -129,7 +129,7 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  app.put("/api/finance/savings/:id", isAuthenticated, async (req: any, res) => {
+  app.put("/api/finance/savings/:id", isAuthenticatedCustom, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { name, balance, target, category } = req.body;
@@ -144,7 +144,7 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  app.delete("/api/finance/savings/:id", isAuthenticated, async (req: any, res) => {
+  app.delete("/api/finance/savings/:id", isAuthenticatedCustom, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       await db.delete(savings).where(and(eq(savings.id, req.params.id), eq(savings.userId, userId)));
@@ -156,7 +156,7 @@ export function registerRoutes(app: Express) {
   });
 
   // Debt CRUD
-  app.post("/api/finance/debt", isAuthenticated, async (req: any, res) => {
+  app.post("/api/finance/debt", isAuthenticatedCustom, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { name, balance, interestRate, minPayment, priority, deadline } = req.body;
@@ -170,7 +170,7 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  app.put("/api/finance/debt/:id", isAuthenticated, async (req: any, res) => {
+  app.put("/api/finance/debt/:id", isAuthenticatedCustom, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { name, balance, interestRate, minPayment, priority, deadline } = req.body;
@@ -185,7 +185,7 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  app.delete("/api/finance/debt/:id", isAuthenticated, async (req: any, res) => {
+  app.delete("/api/finance/debt/:id", isAuthenticatedCustom, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       await db.delete(debt).where(and(eq(debt.id, req.params.id), eq(debt.userId, userId)));
@@ -197,7 +197,7 @@ export function registerRoutes(app: Express) {
   });
 
   // Wishlist CRUD
-  app.post("/api/finance/wishlist", isAuthenticated, async (req: any, res) => {
+  app.post("/api/finance/wishlist", isAuthenticatedCustom, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { item, cost, saved, priority, deadline } = req.body;
@@ -211,7 +211,7 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  app.put("/api/finance/wishlist/:id", isAuthenticated, async (req: any, res) => {
+  app.put("/api/finance/wishlist/:id", isAuthenticatedCustom, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { item, cost, saved, priority, deadline } = req.body;
@@ -226,7 +226,7 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  app.delete("/api/finance/wishlist/:id", isAuthenticated, async (req: any, res) => {
+  app.delete("/api/finance/wishlist/:id", isAuthenticatedCustom, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       await db.delete(wishlist).where(and(eq(wishlist.id, req.params.id), eq(wishlist.userId, userId)));

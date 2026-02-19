@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Sparkles, PiggyBank, Shield, TrendingUp, BarChart3, LogIn, UserPlus } from 'lucide-react';
+import AuthModal from './AuthModal';
 
 const LandingPage: React.FC = () => {
+  const [authModal, setAuthModal] = useState<'signup' | 'signin' | null>(null);
+
   return (
     <div className="min-h-screen bg-[#F9FBFC]">
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100">
@@ -13,20 +16,20 @@ const LandingPage: React.FC = () => {
             <span className="text-lg font-black text-slate-900 tracking-tighter">ZenFinance</span>
           </div>
           <div className="flex items-center space-x-3">
-            <a
-              href="/api/login"
+            <button
+              onClick={() => setAuthModal('signin')}
               className="flex items-center space-x-2 px-5 py-2.5 border-2 border-slate-900 text-slate-900 rounded-xl font-bold text-sm hover:bg-slate-50 transition-colors"
             >
               <LogIn className="w-4 h-4" />
               <span>Sign In</span>
-            </a>
-            <a
-              href="/api/login"
+            </button>
+            <button
+              onClick={() => setAuthModal('signup')}
               className="flex items-center space-x-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-colors shadow-lg shadow-slate-200"
             >
               <UserPlus className="w-4 h-4" />
               <span>Sign Up</span>
-            </a>
+            </button>
           </div>
         </div>
       </nav>
@@ -44,12 +47,12 @@ const LandingPage: React.FC = () => {
               Track income, expenses, savings, and debt all in one place. Get AI-powered insights to make smarter financial decisions.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
-              <a
-                href="/api/login"
+              <button
+                onClick={() => setAuthModal('signup')}
                 className="inline-flex items-center justify-center px-8 py-4 bg-slate-900 text-white rounded-2xl font-bold text-sm hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 hover:shadow-2xl hover:shadow-slate-300"
               >
                 Get Started Free
-              </a>
+              </button>
             </div>
             <div className="flex items-center gap-6 text-xs text-slate-400 font-medium">
               <span className="flex items-center gap-1.5">
@@ -124,6 +127,13 @@ const LandingPage: React.FC = () => {
           <span>Built with care</span>
         </div>
       </footer>
+
+      <AuthModal
+        mode={authModal === 'signin' ? 'signin' : 'signup'}
+        isOpen={authModal !== null}
+        onClose={() => setAuthModal(null)}
+        onSwitchMode={() => setAuthModal(authModal === 'signin' ? 'signup' : 'signin')}
+      />
     </div>
   );
 };

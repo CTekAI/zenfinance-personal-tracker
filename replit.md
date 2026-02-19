@@ -2,9 +2,9 @@
 
 ## Overview
 
-ZenFinance is a full-stack personal finance tracking application built with React, TypeScript, and Express. It provides a dashboard-driven interface for managing income, expenses, savings, debt, and wishlists. The app includes user authentication via Replit Auth and an AI financial advisor powered by Google's Gemini API.
+ZenFinance is a full-stack personal finance tracking application built with React, TypeScript, and Express. It provides a dashboard-driven interface for managing income, expenses, savings, debt, and wishlists. The app includes dual authentication (custom email/password and Replit Auth) and an AI financial advisor powered by Google's Gemini API.
 
-Financial data is persisted in a PostgreSQL database with per-user isolation. Authentication supports Google, GitHub, Apple, and email/password sign-in via Replit's OpenID Connect integration.
+Financial data is persisted in a PostgreSQL database with per-user isolation. Authentication supports custom email/password sign-up/sign-in (via modal forms) as well as Replit's OpenID Connect integration.
 
 ## User Preferences
 
@@ -12,6 +12,7 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **Feb 2026**: Added custom email/password authentication with sign-up and sign-in modals. Passwords hashed with bcrypt. Dual auth system supports both email/password and Replit Auth (OpenID Connect).
 - **Feb 2026**: Added user authentication (Replit Auth) and migrated from localStorage to PostgreSQL database. Each user now has their own isolated financial data. Added landing page for logged-out users.
 
 ## System Architecture
