@@ -52,6 +52,7 @@ Preferred communication style: Simple, everyday language.
   - `index.ts` — Express server entry point
   - `routes.ts` — All finance CRUD API routes
   - `auth.ts` — Custom email/password auth routes and profile endpoints
+  - `ai.ts` — AI financial advisor route (POST /api/ai/advice) using OpenAI
   - `db.ts` — Database connection (Drizzle + Neon)
   - `replit_integrations/auth/` — Replit Auth module (DO NOT MODIFY)
 - `shared/` — Shared between client and server:
@@ -85,7 +86,7 @@ PostgreSQL tables (all finance tables include `userId` for per-user isolation):
 1. **Per-user database storage**: All financial data is stored in PostgreSQL with `userId` column for isolation. Each user only sees their own data.
 2. **Replit Auth**: Authentication via OpenID Connect. No custom login forms — users click "Sign In" which redirects to `/api/login`.
 3. **Single state object**: Finance data is fetched as one `FinanceData` object and passed to components. Individual CRUD operations call the API and update local state.
-4. **AI runs client-side**: The Gemini API is called directly from the browser. The API key is embedded at build time.
+4. **AI runs server-side**: The OpenAI API is called from the Express backend via POST /api/ai/advice. The API key is stored as a secret (OPENAI_API_KEY). Currently uses mock financial data with comments showing where to plug in real DB queries.
 5. **Tailwind via CDN**: Not using PostCSS/Tailwind build pipeline.
 
 ## External Dependencies
@@ -95,7 +96,7 @@ PostgreSQL tables (all finance tables include `userId` for per-user isolation):
 - `@tanstack/react-query` — Server state management (auth hook)
 - `recharts` (v3.7) — Charting library
 - `lucide-react` (v0.563) — Icon library
-- `@google/genai` (v1.39) — Google Gemini AI SDK
+- `openai` — OpenAI SDK for AI financial advisor
 - `express` (v5) — Backend server
 - `drizzle-orm` / `drizzle-kit` — Database ORM and migrations
 - `@neondatabase/serverless` — PostgreSQL driver
@@ -106,7 +107,7 @@ PostgreSQL tables (all finance tables include `userId` for per-user isolation):
 - `vite` (v6.2) + `@vitejs/plugin-react` — Build tooling
 
 ### External APIs
-- **Google Gemini API** — Powers the AI financial advisor chat
+- **OpenAI API** — Powers the AI financial advisor chat (user's own API key via OPENAI_API_KEY secret)
 - **Replit Auth** — OpenID Connect authentication provider
 
 ### CDN Resources

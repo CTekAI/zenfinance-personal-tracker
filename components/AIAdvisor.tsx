@@ -1,15 +1,24 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, User, Bot, Loader2 } from 'lucide-react';
-import { GoogleGenAI } from '@google/genai';
+import { Send, Sparkles, User, Bot, Loader2, CheckCircle2 } from 'lucide-react';
 import { FinanceData } from '../types';
 
 interface AIAdvisorProps {
   data: FinanceData;
 }
 
+interface Advice {
+  summary: string;
+  steps: string[];
+}
+
+interface Message {
+  role: 'user' | 'assistant';
+  content?: string;
+  advice?: Advice;
+}
+
 const AIAdvisor: React.FC<AIAdvisorProps> = ({ data }) => {
-  const [messages, setMessages] = useState<{role: 'user' | 'assistant', content: string}[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -29,31 +38,58 @@ const AIAdvisor: React.FC<AIAdvisorProps> = ({ data }) => {
     setIsLoading(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const context = JSON.stringify(data);
-      
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `Financial context: ${context}\n\nUser Question: ${userMsg}`,
-        config: {
-          systemInstruction: "You are 'ZenAdvisor', a world-class financial planner. Your goal is to help the user achieve financial freedom based on their provided income, outgoings, debt, and wishlist data. Be professional, encouraging, and provide specific, actionable advice based on the numbers provided. Keep responses concise and use markdown formatting for clarity (bullets, bold text, etc.). Always reference the user's specific items like their 'Salary' or 'New Laptop' goal.",
-          temperature: 0.7,
-        },
+      const res = await fetch('/api/ai/advice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ question: userMsg }),
       });
 
-      const text = response.text || "I'm sorry, I couldn't process that request.";
-      setMessages(prev => [...prev, { role: 'assistant', content: text }]);
+      const json = await res.json();
+
+      if (json.ok && json.advice) {
+        setMessages(prev => [...prev, { role: 'assistant', advice: json.advice }]);
+      } else {
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: json.error || "Sorry, I couldn't process that request."
+        }]);
+      }
     } catch (error) {
       console.error(error);
-      setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I'm having trouble connecting to my financial brain. Please try again later." }]);
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: "Sorry, I'm having trouble connecting. Please try again later."
+      }]);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const renderAssistantMessage = (msg: Message) => {
+    if (msg.advice) {
+      return (
+        <div className="space-y-4">
+          <p className="text-sm leading-relaxed text-slate-700">{msg.advice.summary}</p>
+          {msg.advice.steps.length > 0 && (
+            <div className="space-y-2 pt-2 border-t border-slate-100">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Action Steps</p>
+              {msg.advice.steps.map((step, idx) => (
+                <div key={idx} className="flex items-start space-x-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-slate-600">{step}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+    return <span>{msg.content}</span>;
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-12rem)] bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden animate-in fade-in duration-500">
-      {/* Chat Header */}
       <div className="p-6 border-b border-slate-100 flex items-center space-x-4 bg-white/50 backdrop-blur-sm z-10">
         <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200">
           <Sparkles className="w-6 h-6" />
@@ -62,12 +98,11 @@ const AIAdvisor: React.FC<AIAdvisorProps> = ({ data }) => {
           <h3 className="font-black text-slate-900 text-lg tracking-tight">ZenAdvisor</h3>
           <div className="flex items-center space-x-1.5">
             <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Online • Powered by Gemini</p>
+            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Online • Powered by OpenAI</p>
           </div>
         </div>
       </div>
 
-      {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/50">
         {messages.length === 0 && (
           <div className="h-full flex flex-col items-center justify-center text-center max-w-sm mx-auto space-y-6">
@@ -82,9 +117,7 @@ const AIAdvisor: React.FC<AIAdvisorProps> = ({ data }) => {
               {["How can I save more this month?", "Analyze my debt payoff strategy", "Am I on track for my wishlist?"].map((q) => (
                 <button 
                   key={q} 
-                  onClick={() => {
-                    setInput(q);
-                  }}
+                  onClick={() => setInput(q)}
                   className="text-xs font-bold bg-white hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-100 text-slate-500 py-3 px-4 rounded-xl border border-slate-200 transition-all shadow-sm"
                 >
                   "{q}"
@@ -102,12 +135,12 @@ const AIAdvisor: React.FC<AIAdvisorProps> = ({ data }) => {
               }`}>
                 {m.role === 'user' ? <User className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
               </div>
-              <div className={`p-5 rounded-[1.5rem] text-sm leading-relaxed whitespace-pre-wrap shadow-sm ${
+              <div className={`p-5 rounded-[1.5rem] text-sm leading-relaxed shadow-sm ${
                 m.role === 'user' 
-                  ? 'bg-indigo-600 text-white rounded-tr-none' 
+                  ? 'bg-indigo-600 text-white rounded-tr-none whitespace-pre-wrap' 
                   : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none'
               }`}>
-                {m.content}
+                {m.role === 'assistant' ? renderAssistantMessage(m) : m.content}
               </div>
             </div>
           </div>
@@ -122,7 +155,6 @@ const AIAdvisor: React.FC<AIAdvisorProps> = ({ data }) => {
         )}
       </div>
 
-      {/* Input */}
       <div className="p-6 bg-white border-t border-slate-100">
         <div className="flex items-center space-x-3 bg-slate-50 p-2 rounded-[1.5rem] border border-slate-200 focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
           <input 
