@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { isAuthenticatedCustom } from "./auth";
 import OpenAI from "openai";
 
-// the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
+// Using gpt-4o for broad compatibility with user's own OpenAI API key
 let openaiClient: OpenAI | null = null;
 function getOpenAI(): OpenAI {
   if (!openaiClient) {
@@ -86,29 +86,41 @@ Rules:
       const userMessage = `Here is my financial snapshot:\n${JSON.stringify(snapshot, null, 2)}\n\nMy question: ${question}`;
 
       const response = await getOpenAI().chat.completions.create({
-        model: "gpt-5",
+        model: "gpt-4o",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userMessage },
         ],
         response_format: { type: "json_object" },
-        max_completion_tokens: 1024,
+        max_tokens: 1024,
+        temperature: 0.7,
       });
 
       const raw = response.choices[0]?.message?.content;
       if (!raw) {
-        return res.status(500).json({ ok: false, error: "No response from AI." });
+        console.error("AI advice: empty response from OpenAI", JSON.stringify(response.choices));
+        return res.status(500).json({ ok: false, error: "No response from AI. Please try again." });
       }
 
-      const advice = JSON.parse(raw) as { summary: string; steps: string[] };
+      let advice: { summary: string; steps: string[] };
+      try {
+        advice = JSON.parse(raw);
+      } catch (parseErr) {
+        console.error("AI advice: failed to parse JSON response:", raw);
+        return res.status(500).json({ ok: false, error: "AI returned an unexpected format. Please try again." });
+      }
 
       return res.json({ ok: true, advice });
     } catch (error: any) {
-      console.error("AI advice error:", error);
-      const message =
-        error?.status === 401
-          ? "Invalid OpenAI API key."
-          : "Failed to get AI advice. Please try again.";
+      console.error("AI advice error:", error?.message || error);
+      let message = "Failed to get AI advice. Please try again.";
+      if (error?.status === 401) {
+        message = "Invalid OpenAI API key. Please check your key in settings.";
+      } else if (error?.status === 429) {
+        message = "Rate limit reached. Please wait a moment and try again.";
+      } else if (error?.status === 404) {
+        message = "AI model not available. Please check your OpenAI account.";
+      }
       return res.status(500).json({ ok: false, error: message });
     }
   });
