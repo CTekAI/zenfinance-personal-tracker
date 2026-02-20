@@ -25,7 +25,7 @@ const port = isProd ? 5000 : 3001;
     const distPath = path.join(process.cwd(), "dist");
     if (fs.existsSync(distPath)) {
       app.use(express.static(distPath));
-      app.get("*", (_req, res) => {
+      app.get("/{*splat}", (_req, res) => {
         res.sendFile(path.join(distPath, "index.html"));
       });
     }
