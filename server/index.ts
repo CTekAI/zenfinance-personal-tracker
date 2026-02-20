@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import path from "path";
+import fs from "fs";
 import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 import { registerCustomAuthRoutes } from "./auth";
 import { registerRoutes } from "./routes";
@@ -10,6 +11,9 @@ const app = express();
 app.use(express.json());
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
+const isProd = process.env.NODE_ENV === "production";
+const port = isProd ? 5000 : 3001;
+
 (async () => {
   await setupAuth(app);
   registerAuthRoutes(app);
@@ -17,7 +21,17 @@ app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
   registerRoutes(app);
   registerAIRoutes(app);
 
-  app.listen(3001, "0.0.0.0", () => {
-    console.log("API server running on port 3001");
+  if (isProd) {
+    const distPath = path.join(process.cwd(), "dist");
+    if (fs.existsSync(distPath)) {
+      app.use(express.static(distPath));
+      app.get("*", (_req, res) => {
+        res.sendFile(path.join(distPath, "index.html"));
+      });
+    }
+  }
+
+  app.listen(port, "0.0.0.0", () => {
+    console.log(`API server running on port ${port}`);
   });
 })();
