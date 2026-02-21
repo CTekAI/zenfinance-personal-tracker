@@ -1,16 +1,17 @@
-
 import React, { useState } from 'react';
-import { Plus, Trash2, ShoppingBag, Clock, Calendar, ArrowUpRight, Search, Filter } from 'lucide-react';
-import { FinanceData, OutgoingItem, FrequencyType } from '../types';
+import { Plus, Trash2, ShoppingBag, Filter } from 'lucide-react';
+import { FinanceData, FrequencyType } from '../types';
 import { CATEGORIES } from '../constants';
 import { addOutgoing, deleteOutgoing } from '../client/src/lib/api';
+import { formatCurrency, CurrencyCode } from '../client/src/lib/currency';
 
 interface OutgoingsTrackerProps {
   data: FinanceData;
   setData: React.Dispatch<React.SetStateAction<FinanceData>>;
+  currency: CurrencyCode;
 }
 
-const OutgoingsTracker: React.FC<OutgoingsTrackerProps> = ({ data, setData }) => {
+const OutgoingsTracker: React.FC<OutgoingsTrackerProps> = ({ data, setData, currency }) => {
   const [showAdd, setShowAdd] = useState(false);
   const [newItem, setNewItem] = useState({
     description: '',
@@ -50,6 +51,8 @@ const OutgoingsTracker: React.FC<OutgoingsTrackerProps> = ({ data, setData }) =>
       console.error('Failed to delete outgoing:', error);
     }
   };
+
+  const fc = (amount: number) => formatCurrency(amount, currency);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -139,7 +142,7 @@ const OutgoingsTracker: React.FC<OutgoingsTrackerProps> = ({ data, setData }) =>
                 </div>
                 <div className="flex items-center space-x-4">
                   <div className="text-right">
-                    <p className="font-black text-slate-900 text-lg tracking-tighter">-${item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                    <p className="font-black text-slate-900 text-lg tracking-tighter">-{fc(item.amount)}</p>
                     <p className="text-[9px] font-black text-[#FF4B8B] uppercase tracking-widest">{item.frequency}</p>
                   </div>
                   <button 

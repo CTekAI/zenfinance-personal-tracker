@@ -1,15 +1,16 @@
-
 import React, { useState } from 'react';
 import { Plus, Trash2, Heart, PiggyBank, GripVertical, AlarmClock, Calendar, ArrowUpCircle } from 'lucide-react';
-import { FinanceData, WishlistItem } from '../types';
+import { FinanceData } from '../types';
 import { addWishlistItem, deleteWishlistItem, updateWishlistItem } from '../client/src/lib/api';
+import { formatCurrency, CurrencyCode, CURRENCIES } from '../client/src/lib/currency';
 
 interface WishlistTrackerProps {
   data: FinanceData;
   setData: React.Dispatch<React.SetStateAction<FinanceData>>;
+  currency: CurrencyCode;
 }
 
-const WishlistTracker: React.FC<WishlistTrackerProps> = ({ data, setData }) => {
+const WishlistTracker: React.FC<WishlistTrackerProps> = ({ data, setData, currency }) => {
   const [showAdd, setShowAdd] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [pendingWishlistDeposits, setPendingWishlistDeposits] = useState<Record<string, string>>({});
@@ -101,6 +102,9 @@ const WishlistTracker: React.FC<WishlistTrackerProps> = ({ data, setData }) => {
     setDraggedIndex(null);
   };
 
+  const fc = (amount: number) => formatCurrency(amount, currency);
+  const sym = CURRENCIES[currency].symbol;
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -132,7 +136,7 @@ const WishlistTracker: React.FC<WishlistTrackerProps> = ({ data, setData }) => {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Total Cost ($)</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Total Cost</label>
               <input 
                 type="text" 
                 value={newItem.cost}
@@ -142,7 +146,7 @@ const WishlistTracker: React.FC<WishlistTrackerProps> = ({ data, setData }) => {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Current Savings ($)</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Current Savings</label>
               <input 
                 type="text" 
                 value={newItem.saved}
@@ -238,9 +242,9 @@ const WishlistTracker: React.FC<WishlistTrackerProps> = ({ data, setData }) => {
                       <div className="flex justify-between items-end mb-2">
                         <div className="flex items-baseline space-x-2">
                            <p className="text-3xl font-black text-slate-900 tracking-tighter">
-                             ${item.saved.toLocaleString()}
+                             {fc(item.saved)}
                            </p>
-                           <span className="text-sm font-bold text-slate-300">/ ${item.cost.toLocaleString()}</span>
+                           <span className="text-sm font-bold text-slate-300">/ {fc(item.cost)}</span>
                         </div>
                         <span className="text-xs font-black text-[#EC4899] bg-pink-50 px-2 py-1 rounded-lg">{Math.round(progress)}%</span>
                       </div>
@@ -254,7 +258,7 @@ const WishlistTracker: React.FC<WishlistTrackerProps> = ({ data, setData }) => {
 
                     <div className="flex items-center space-x-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 text-xs font-mono">$</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 text-xs font-mono">{sym}</span>
                         <input 
                           type="text"
                           value={pendingWishlistDeposits[item.id] || ''}

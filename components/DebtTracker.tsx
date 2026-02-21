@@ -1,15 +1,16 @@
-
 import React, { useState } from 'react';
 import { Plus, Trash2, CreditCard, Percent, Activity, Calendar, ShieldAlert, ArrowDownCircle, GripVertical } from 'lucide-react';
 import { FinanceData, DebtItem } from '../types';
 import { addDebt, updateDebt, deleteDebt } from '../client/src/lib/api';
+import { formatCurrency, CurrencyCode, CURRENCIES } from '../client/src/lib/currency';
 
 interface DebtTrackerProps {
   data: FinanceData;
   setData: React.Dispatch<React.SetStateAction<FinanceData>>;
+  currency: CurrencyCode;
 }
 
-const DebtTracker: React.FC<DebtTrackerProps> = ({ data, setData }) => {
+const DebtTracker: React.FC<DebtTrackerProps> = ({ data, setData, currency }) => {
   const [showAdd, setShowAdd] = useState(false);
   const [pendingPayments, setPendingPayments] = useState<Record<string, string>>({});
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -112,6 +113,8 @@ const DebtTracker: React.FC<DebtTrackerProps> = ({ data, setData }) => {
   };
 
   const totalDebt = data.debt.reduce((sum, d) => sum + d.balance, 0);
+  const fc = (amount: number) => formatCurrency(amount, currency);
+  const sym = CURRENCIES[currency].symbol;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -132,7 +135,7 @@ const DebtTracker: React.FC<DebtTrackerProps> = ({ data, setData }) => {
       <div className="bg-slate-900 rounded-[2.5rem] p-10 text-white relative overflow-hidden shadow-2xl shadow-slate-200">
         <div className="relative z-10">
           <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">Total Outstanding</p>
-          <h2 className="text-6xl font-black tracking-tighter mb-8">${totalDebt.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h2>
+          <h2 className="text-6xl font-black tracking-tighter mb-8">{fc(totalDebt)}</h2>
           <div className="flex flex-wrap gap-6">
             <div className="flex items-center space-x-3 bg-white/5 px-4 py-3 rounded-2xl border border-white/10 backdrop-blur-sm">
               <Percent className="w-5 h-5 text-indigo-400" />
@@ -149,7 +152,7 @@ const DebtTracker: React.FC<DebtTrackerProps> = ({ data, setData }) => {
               <Activity className="w-5 h-5 text-emerald-400" />
               <div>
                 <p className="text-[10px] text-slate-400 font-bold uppercase">Monthly Min</p>
-                <p className="font-bold text-sm">${data.debt.reduce((s, d) => s + d.minPayment, 0).toLocaleString()}</p>
+                <p className="font-bold text-sm">{fc(data.debt.reduce((s, d) => s + d.minPayment, 0))}</p>
               </div>
             </div>
           </div>
@@ -192,7 +195,7 @@ const DebtTracker: React.FC<DebtTrackerProps> = ({ data, setData }) => {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Min. Payment ($)</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Min. Payment</label>
               <input 
                 type="text" 
                 value={newItem.minPayment}
@@ -290,14 +293,14 @@ const DebtTracker: React.FC<DebtTrackerProps> = ({ data, setData }) => {
                   <div className="text-right">
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Balance</p>
                     <div className="flex items-baseline justify-end gap-2">
-                      <span className="text-3xl font-black text-slate-900 tracking-tighter">${item.balance.toLocaleString(undefined, { minimumFractionDigits: 0 })}</span>
+                      <span className="text-3xl font-black text-slate-900 tracking-tighter">{fc(item.balance)}</span>
                     </div>
-                    <p className="text-xs text-slate-400 font-medium">Min Payment: ${item.minPayment.toLocaleString()}</p>
+                    <p className="text-xs text-slate-400 font-medium">Min Payment: {fc(item.minPayment)}</p>
                   </div>
 
                   <div className="flex items-center space-x-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 text-xs font-mono">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 text-xs font-mono">{sym}</span>
                       <input 
                         type="text"
                         value={pendingPayments[item.id] || ''}

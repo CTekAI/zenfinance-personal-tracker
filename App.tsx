@@ -12,7 +12,8 @@ import {
   Bell,
   LogOut,
   Loader2,
-  UserCircle
+  UserCircle,
+  Landmark
 } from 'lucide-react';
 import { FinanceData, TabType } from './types';
 import Dashboard from './components/Dashboard';
@@ -21,10 +22,13 @@ import OutgoingsTracker from './components/OutgoingsTracker';
 import DebtTracker from './components/DebtTracker';
 import SavingsTracker from './components/SavingsTracker';
 import WishlistTracker from './components/WishlistTracker';
+import AccountsTracker from './components/AccountsTracker';
 import AIAdvisor from './components/AIAdvisor';
 import Profile from './components/Profile';
 import LandingPage from './components/LandingPage';
 import { useAuth } from './client/src/hooks/use-auth';
+import { CurrencyCode, CURRENCIES } from './client/src/lib/currency';
+import { updateCurrency } from './client/src/lib/api';
 
 const EMPTY_DATA: FinanceData = {
   income: [],
@@ -32,6 +36,7 @@ const EMPTY_DATA: FinanceData = {
   savings: [],
   debt: [],
   wishlist: [],
+  accounts: [],
 };
 
 const App: React.FC = () => {
@@ -40,13 +45,14 @@ const App: React.FC = () => {
   const [data, setData] = useState<FinanceData>(EMPTY_DATA);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
+  const [currency, setCurrency] = useState<CurrencyCode>('USD');
 
   const fetchData = useCallback(async () => {
     try {
       const res = await fetch('/api/finance', { credentials: 'include' });
       if (res.ok) {
         const financeData = await res.json();
-        setData(financeData);
+        setData({ ...financeData, accounts: financeData.accounts || [] });
       }
     } catch (error) {
       console.error('Error fetching finance data:', error);
@@ -63,6 +69,20 @@ const App: React.FC = () => {
     }
   }, [isAuthenticated, fetchData]);
 
+  useEffect(() => {
+    if (user?.currency) {
+      setCurrency(user.currency as CurrencyCode);
+    }
+  }, [user]);
+
+  const handleCurrencyChange = async (newCurrency: CurrencyCode) => {
+    setCurrency(newCurrency);
+    try {
+      await updateCurrency(newCurrency);
+    } catch (error) {
+      console.error('Failed to update currency:', error);
+    }
+  };
 
   if (authLoading) {
     return (
@@ -96,6 +116,7 @@ const App: React.FC = () => {
     { id: 'Outgoings', icon: TrendingDown, label: 'Expenses' },
     { id: 'Savings', icon: PiggyBank, label: 'Savings' },
     { id: 'Debt', icon: CreditCard, label: 'Debt' },
+    { id: 'Accounts', icon: Landmark, label: 'Accounts' },
     { id: 'Wishlist', icon: Heart, label: 'Wishlist' },
     { id: 'AI Advisor', icon: Sparkles, label: 'ZenAI' },
     { id: 'Profile', icon: UserCircle, label: 'Profile' },
@@ -103,15 +124,16 @@ const App: React.FC = () => {
 
   const renderActiveTab = () => {
     switch (activeTab) {
-      case 'Dashboard': return <Dashboard data={data} />;
-      case 'Income': return <IncomeTracker data={data} setData={setData} />;
-      case 'Outgoings': return <OutgoingsTracker data={data} setData={setData} />;
-      case 'Savings': return <SavingsTracker data={data} setData={setData} />;
-      case 'Debt': return <DebtTracker data={data} setData={setData} />;
-      case 'Wishlist': return <WishlistTracker data={data} setData={setData} />;
+      case 'Dashboard': return <Dashboard data={data} currency={currency} />;
+      case 'Income': return <IncomeTracker data={data} setData={setData} currency={currency} />;
+      case 'Outgoings': return <OutgoingsTracker data={data} setData={setData} currency={currency} />;
+      case 'Savings': return <SavingsTracker data={data} setData={setData} currency={currency} />;
+      case 'Debt': return <DebtTracker data={data} setData={setData} currency={currency} />;
+      case 'Accounts': return <AccountsTracker data={data} setData={setData} currency={currency} />;
+      case 'Wishlist': return <WishlistTracker data={data} setData={setData} currency={currency} />;
       case 'AI Advisor': return <AIAdvisor data={data} />;
       case 'Profile': return user ? <Profile user={user} /> : null;
-      default: return <Dashboard data={data} />;
+      default: return <Dashboard data={data} currency={currency} />;
     }
   };
 
@@ -193,6 +215,15 @@ const App: React.FC = () => {
             <h2 className="text-2xl font-black text-slate-900 tracking-tighter">{activeTab}</h2>
           </div>
           <div className="flex items-center space-x-4">
+             <select
+               value={currency}
+               onChange={e => handleCurrencyChange(e.target.value as CurrencyCode)}
+               className="px-3 py-2 bg-white border border-slate-100 rounded-xl shadow-sm text-sm font-bold text-slate-700 focus:ring-2 focus:ring-slate-900 outline-none cursor-pointer"
+             >
+               {Object.values(CURRENCIES).map(c => (
+                 <option key={c.code} value={c.code}>{c.symbol} {c.code}</option>
+               ))}
+             </select>
              <button className="p-3 bg-white border border-slate-100 rounded-2xl shadow-sm text-slate-400 hover:text-slate-900 transition-colors">
                <Bell className="w-5 h-5" />
              </button>

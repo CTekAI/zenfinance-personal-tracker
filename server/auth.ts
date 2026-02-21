@@ -164,6 +164,7 @@ export function registerCustomAuthRoutes(app: Express) {
         firstName: dbUser.firstName,
         lastName: dbUser.lastName,
         profileImageUrl: dbUser.profileImageUrl,
+        currency: dbUser.currency || "USD",
         createdAt: dbUser.createdAt,
         updatedAt: dbUser.updatedAt,
       });
@@ -295,6 +296,27 @@ export function registerCustomAuthRoutes(app: Express) {
         return res.status(500).json({ message: "Failed to save profile photo" });
       }
     });
+  });
+
+  app.put("/api/auth/currency", isAuthenticatedCustom, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { currency } = req.body;
+      const validCurrencies = ["USD", "GBP", "EUR", "IDR"];
+      if (!currency || !validCurrencies.includes(currency)) {
+        return res.status(400).json({ message: "Invalid currency" });
+      }
+      const [updated] = await db
+        .update(users)
+        .set({ currency, updatedAt: new Date() })
+        .where(eq(users.id, userId))
+        .returning();
+      if (!updated) return res.status(404).json({ message: "User not found" });
+      return res.json({ currency: updated.currency });
+    } catch (error) {
+      console.error("Currency update error:", error);
+      return res.status(500).json({ message: "Failed to update currency" });
+    }
   });
 
   app.post("/api/auth/logout", (req, res) => {

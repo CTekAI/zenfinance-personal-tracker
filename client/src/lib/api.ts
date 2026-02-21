@@ -1,4 +1,4 @@
-import type { FinanceData, IncomeItem, OutgoingItem, SavingsItem, DebtItem, WishlistItem } from '../../../types';
+import type { FinanceData, IncomeItem, OutgoingItem, SavingsItem, DebtItem, WishlistItem, AccountItem } from '../../../types';
 
 async function apiCall<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -78,4 +78,20 @@ export async function updateWishlistItem(id: string, item: Partial<WishlistItem>
 
 export async function deleteWishlistItem(id: string): Promise<void> {
   await apiCall(`/api/finance/wishlist/${id}`, { method: 'DELETE' });
+}
+
+export async function addAccount(item: Omit<AccountItem, 'id'>): Promise<AccountItem> {
+  return apiCall<AccountItem>('/api/finance/accounts', { method: 'POST', body: JSON.stringify(item) });
+}
+
+export async function updateAccount(id: string, item: Partial<AccountItem>): Promise<AccountItem> {
+  return apiCall<AccountItem>(`/api/finance/accounts/${id}`, { method: 'PUT', body: JSON.stringify(item) });
+}
+
+export async function deleteAccount(id: string): Promise<void> {
+  await apiCall(`/api/finance/accounts/${id}`, { method: 'DELETE' });
+}
+
+export async function updateCurrency(currency: string): Promise<{ currency: string }> {
+  return apiCall<{ currency: string }>('/api/auth/currency', { method: 'PUT', body: JSON.stringify({ currency }) });
 }

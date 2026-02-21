@@ -1,16 +1,17 @@
-
 import React, { useState } from 'react';
-import { Plus, Trash2, Wallet, ArrowUpRight, PlusCircle } from 'lucide-react';
+import { Plus, Trash2, Wallet, ArrowUpRight } from 'lucide-react';
 import { FinanceData, IncomeItem, FrequencyType } from '../types';
 import { CATEGORIES } from '../constants';
 import { addIncome, deleteIncome } from '../client/src/lib/api';
+import { formatCurrency, CurrencyCode } from '../client/src/lib/currency';
 
 interface IncomeTrackerProps {
   data: FinanceData;
   setData: React.Dispatch<React.SetStateAction<FinanceData>>;
+  currency: CurrencyCode;
 }
 
-const IncomeTracker: React.FC<IncomeTrackerProps> = ({ data, setData }) => {
+const IncomeTracker: React.FC<IncomeTrackerProps> = ({ data, setData, currency }) => {
   const [showAdd, setShowAdd] = useState(false);
   const [isCustomCategory, setIsCustomCategory] = useState(false);
   
@@ -64,6 +65,8 @@ const IncomeTracker: React.FC<IncomeTrackerProps> = ({ data, setData }) => {
     }
   };
 
+  const fc = (amount: number) => formatCurrency(amount, currency);
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -100,7 +103,7 @@ const IncomeTracker: React.FC<IncomeTrackerProps> = ({ data, setData }) => {
                 type="text" 
                 value={newItem.amount}
                 onChange={e => setNewItem({...newItem, amount: e.target.value})}
-                placeholder="$0.00"
+                placeholder="0.00"
                 className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none transition-all font-mono font-bold"
               />
             </div>
@@ -166,7 +169,7 @@ const IncomeTracker: React.FC<IncomeTrackerProps> = ({ data, setData }) => {
               <div>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Monthly Flow</p>
                 <h3 className="text-3xl font-black text-slate-900 tracking-tighter">
-                  ${item.amount.toLocaleString()}
+                  {fc(item.amount)}
                 </h3>
               </div>
               <div className="bg-emerald-50 p-2 rounded-xl">

@@ -1,16 +1,17 @@
-
 import React, { useState } from 'react';
 import { Plus, Trash2, PiggyBank, ArrowUpCircle, TrendingUp } from 'lucide-react';
-import { FinanceData, SavingsItem } from '../types';
+import { FinanceData } from '../types';
 import { CATEGORIES } from '../constants';
 import { addSavings, updateSavings, deleteSavings } from '../client/src/lib/api';
+import { formatCurrency, CurrencyCode, CURRENCIES } from '../client/src/lib/currency';
 
 interface SavingsTrackerProps {
   data: FinanceData;
   setData: React.Dispatch<React.SetStateAction<FinanceData>>;
+  currency: CurrencyCode;
 }
 
-const SavingsTracker: React.FC<SavingsTrackerProps> = ({ data, setData }) => {
+const SavingsTracker: React.FC<SavingsTrackerProps> = ({ data, setData, currency }) => {
   const [showAdd, setShowAdd] = useState(false);
   const [pendingDeposits, setPendingDeposits] = useState<Record<string, string>>({});
   
@@ -77,6 +78,8 @@ const SavingsTracker: React.FC<SavingsTrackerProps> = ({ data, setData }) => {
   };
 
   const totalSavings = data.savings.reduce((sum, s) => sum + s.balance, 0);
+  const fc = (amount: number) => formatCurrency(amount, currency);
+  const sym = CURRENCIES[currency].symbol;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -98,7 +101,7 @@ const SavingsTracker: React.FC<SavingsTrackerProps> = ({ data, setData }) => {
         <div className="relative z-10">
           <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">Total Accumulated</p>
           <h2 className="text-6xl font-black tracking-tighter mb-8">
-            ${totalSavings.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            {fc(totalSavings)}
           </h2>
           <div className="flex items-center space-x-3 bg-white/5 px-4 py-2 rounded-full border border-white/10 w-fit">
             <TrendingUp className="w-4 h-4 text-[#5CC8BE]" />
@@ -178,9 +181,9 @@ const SavingsTracker: React.FC<SavingsTrackerProps> = ({ data, setData }) => {
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Available Balance</p>
                 <div className="flex items-baseline space-x-3">
                   <h3 className="text-4xl font-black text-slate-900 tracking-tighter">
-                    ${item.balance.toLocaleString(undefined, { minimumFractionDigits: 0 })}
+                    {fc(item.balance)}
                   </h3>
-                  {item.target && <span className="text-sm font-bold text-slate-300">/ ${item.target.toLocaleString()}</span>}
+                  {item.target && <span className="text-sm font-bold text-slate-300">/ {fc(item.target)}</span>}
                 </div>
                 
                 {item.target && (
@@ -198,7 +201,7 @@ const SavingsTracker: React.FC<SavingsTrackerProps> = ({ data, setData }) => {
 
               <div className="flex items-center space-x-2 bg-slate-50 p-1 rounded-2xl border border-slate-100">
                 <div className="relative flex-1">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 font-mono text-xs">$</span>
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 font-mono text-xs">{sym}</span>
                   <input 
                     type="text"
                     value={pendingDeposits[item.id] || ''}

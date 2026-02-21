@@ -1,5 +1,15 @@
-import { pgTable, varchar, numeric, timestamp, text } from "drizzle-orm/pg-core";
+import { pgTable, varchar, numeric, timestamp } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+
+export const accounts = pgTable("accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  name: varchar("name").notNull(),
+  type: varchar("type").notNull(),
+  balance: numeric("balance", { precision: 12, scale: 2 }).notNull(),
+  currency: varchar("currency").notNull().default("USD"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
 
 export const income = pgTable("income", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

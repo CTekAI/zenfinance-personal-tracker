@@ -1,19 +1,20 @@
 import type { Express } from "express";
 import { isAuthenticatedCustom } from "./auth";
 import { db } from "./db";
-import { income, outgoings, savings, debt, wishlist } from "@shared/models/finance";
+import { income, outgoings, savings, debt, wishlist, accounts } from "@shared/models/finance";
 import { eq, and } from "drizzle-orm";
 
 export function registerRoutes(app: Express) {
   app.get("/api/finance", isAuthenticatedCustom, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const [incomeData, outgoingsData, savingsData, debtData, wishlistData] = await Promise.all([
+      const [incomeData, outgoingsData, savingsData, debtData, wishlistData, accountsData] = await Promise.all([
         db.select().from(income).where(eq(income.userId, userId)),
         db.select().from(outgoings).where(eq(outgoings.userId, userId)),
         db.select().from(savings).where(eq(savings.userId, userId)),
         db.select().from(debt).where(eq(debt.userId, userId)),
         db.select().from(wishlist).where(eq(wishlist.userId, userId)),
+        db.select().from(accounts).where(eq(accounts.userId, userId)),
       ]);
 
       const toNum = (v: string | null) => v ? parseFloat(v) : 0;
@@ -25,6 +26,7 @@ export function registerRoutes(app: Express) {
         savings: savingsData.map(r => ({ id: r.id, name: r.name, balance: toNum(r.balance), target: toNumOrUndef(r.target), category: r.category })),
         debt: debtData.map(r => ({ id: r.id, name: r.name, balance: toNum(r.balance), interestRate: toNum(r.interestRate), minPayment: toNum(r.minPayment), priority: r.priority, deadline: r.deadline || undefined })),
         wishlist: wishlistData.map(r => ({ id: r.id, item: r.item, cost: toNum(r.cost), saved: toNum(r.saved), priority: r.priority, deadline: r.deadline || undefined })),
+        accounts: accountsData.map(r => ({ id: r.id, name: r.name, type: r.type, balance: toNum(r.balance), currency: r.currency })),
       });
     } catch (error) {
       console.error("Error fetching finance data:", error);
@@ -234,6 +236,46 @@ export function registerRoutes(app: Express) {
     } catch (error) {
       console.error("Error deleting wishlist item:", error);
       res.status(500).json({ message: "Failed to delete wishlist item" });
+    }
+  });
+
+  app.post("/api/finance/accounts", isAuthenticatedCustom, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { name, type, balance, currency } = req.body;
+      const [row] = await db.insert(accounts).values({
+        userId, name, type, balance: String(balance), currency: currency || "USD",
+      }).returning();
+      res.json({ id: row.id, name: row.name, type: row.type, balance: parseFloat(row.balance), currency: row.currency });
+    } catch (error) {
+      console.error("Error adding account:", error);
+      res.status(500).json({ message: "Failed to add account" });
+    }
+  });
+
+  app.put("/api/finance/accounts/:id", isAuthenticatedCustom, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { name, type, balance, currency } = req.body;
+      const [row] = await db.update(accounts).set({
+        name, type, balance: String(balance), currency: currency || "USD",
+      }).where(and(eq(accounts.id, req.params.id), eq(accounts.userId, userId))).returning();
+      if (!row) return res.status(404).json({ message: "Not found" });
+      res.json({ id: row.id, name: row.name, type: row.type, balance: parseFloat(row.balance), currency: row.currency });
+    } catch (error) {
+      console.error("Error updating account:", error);
+      res.status(500).json({ message: "Failed to update account" });
+    }
+  });
+
+  app.delete("/api/finance/accounts/:id", isAuthenticatedCustom, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      await db.delete(accounts).where(and(eq(accounts.id, req.params.id), eq(accounts.userId, userId)));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      res.status(500).json({ message: "Failed to delete account" });
     }
   });
 }

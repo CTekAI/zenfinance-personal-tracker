@@ -12,6 +12,8 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **Feb 2026**: Added multi-currency support (USD, GBP, EUR, IDR) with per-user currency preference stored in database. Currency selector in app header. All components use `formatCurrency()` helper with `Intl.NumberFormat`.
+- **Feb 2026**: Added bank accounts management system. New `accounts` table with CRUD API routes. AccountsTracker component supports add/edit/delete with per-account currency. Dashboard Total Capital now uses account balances when available.
 - **Feb 2026**: Added custom email/password authentication with sign-up and sign-in modals. Passwords hashed with bcrypt. Dual auth system supports both email/password and Replit Auth (OpenID Connect).
 - **Feb 2026**: Added user authentication (Replit Auth) and migrated from localStorage to PostgreSQL database. Each user now has their own isolated financial data. Added landing page for logged-out users.
 
