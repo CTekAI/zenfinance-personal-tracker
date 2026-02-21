@@ -1,0 +1,51 @@
+New features I want:
+
+Currency selection
+
+Add a currency selector in the UI (for example, a dropdown in the header or near “Total Capital”).
+
+Support at least: GBP (£), USD ($), EUR (€), IDR (Rp).
+
+Store the selected currency in state (or a global config) so it’s remembered across the dashboard.
+
+Make all money values (total capital, asset allocation, expenses, recent activity, health score card, etc.) display using the selected currency symbol and correct formatting.
+
+Keep existing numeric logic (amounts and calculations) the same; only change how values are displayed.
+
+Multiple bank accounts
+
+Replace the assumption of a single “total capital” source with a list of bank accounts.
+
+Create a data structure like accounts = [{ id, name, type, balance, currency }].
+
+Add UI to:
+
+View all accounts in a small panel or list (e.g. a card on the dashboard or a new “Accounts” section in the sidebar).
+
+Add a new account (name, type, balance, currency) via a simple form or modal.
+
+Optionally edit or delete an account.
+
+Make “Total Capital” become the sum of all account balances converted into the selected display currency (you can stub a simple conversion function or assume same currency for now; tell me which approach you used).
+
+Ensure expenses, asset allocation, and other cards still work; if they depend on balances, update them to use the accounts data.
+
+Constraints:
+
+Do not remove any existing screens or major components.
+
+Keep the current visual style (cards, gradients, sidebar) as close as possible.
+
+Make changes incrementally rather than rewriting the whole app.
+
+What I want from you:
+
+Inspect the current code and describe where the dashboard data and money values are defined.
+
+Propose a file-by-file plan to add currency selection and multiple accounts.
+
+Show the exact code changes as patches or full snippets for each file.
+
+Provide a short test checklist so I can verify currency switching and account management works.
+
+Start by explaining your understanding and plan, then wait for my confirmation before applying the edits.
