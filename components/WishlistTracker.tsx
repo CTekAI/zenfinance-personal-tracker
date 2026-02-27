@@ -19,13 +19,25 @@ const WishlistTracker: React.FC<WishlistTrackerProps> = ({ data, setData, curren
     item: '',
     cost: '',
     saved: '',
-    deadline: ''
+    deadline: '',
+    currency: currency as string
   });
 
   const cleanNumber = (val: string) => {
     const parsed = parseFloat(val.replace(/[^0-9.]/g, ''));
     return isNaN(parsed) ? 0 : parsed;
   };
+
+  const currencyTotals: Record<string, { cost: number; saved: number }> = React.useMemo(() => {
+    const totals: Record<string, { cost: number; saved: number }> = {};
+    data.wishlist.forEach(item => {
+      const cur = item.currency || currency;
+      if (!totals[cur]) totals[cur] = { cost: 0, saved: 0 };
+      totals[cur].cost += item.cost;
+      totals[cur].saved += item.saved;
+    });
+    return totals;
+  }, [data.wishlist, currency]);
 
   const handleAdd = async () => {
     if (!newItem.item) return;
@@ -35,14 +47,15 @@ const WishlistTracker: React.FC<WishlistTrackerProps> = ({ data, setData, curren
       cost: cleanNumber(newItem.cost),
       saved: cleanNumber(newItem.saved),
       priority: 'Medium' as const,
-      deadline: newItem.deadline || undefined
+      deadline: newItem.deadline || undefined,
+      currency: newItem.currency
     };
 
     try {
       const serverItem = await addWishlistItem(itemToAdd);
       setData(prev => ({ ...prev, wishlist: [serverItem, ...prev.wishlist] }));
       setShowAdd(false);
-      setNewItem({ item: '', cost: '', saved: '', deadline: '' });
+      setNewItem({ item: '', cost: '', saved: '', deadline: '', currency: currency });
     } catch (error) {
       console.error('Failed to add wishlist item:', error);
     }
@@ -102,8 +115,10 @@ const WishlistTracker: React.FC<WishlistTrackerProps> = ({ data, setData, curren
     setDraggedIndex(null);
   };
 
-  const fc = (amount: number) => formatCurrency(amount, currency);
-  const sym = CURRENCIES[currency].symbol;
+  const getItemCurrency = (item: { currency?: string }): CurrencyCode => {
+    const cur = item.currency || currency;
+    return (cur in CURRENCIES ? cur : currency) as CurrencyCode;
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -120,6 +135,31 @@ const WishlistTracker: React.FC<WishlistTrackerProps> = ({ data, setData, curren
           <span>Add Goal</span>
         </button>
       </div>
+
+      {Object.keys(currencyTotals).length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Object.entries(currencyTotals).map(([cur, totals]) => {
+            const cc = cur as CurrencyCode;
+            const overallProgress = totals.cost > 0 ? (totals.saved / totals.cost) * 100 : 0;
+            return (
+              <div key={cur} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{cur} Total</span>
+                  <span className="text-[10px] font-black text-[#EC4899] bg-pink-50 px-2 py-0.5 rounded-lg">{Math.round(overallProgress)}%</span>
+                </div>
+                <p className="text-xl font-black text-slate-900 tracking-tight">{formatCurrency(totals.saved, cc)}</p>
+                <p className="text-xs font-bold text-slate-400 mt-0.5">of {formatCurrency(totals.cost, cc)} goal</p>
+                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-3">
+                  <div 
+                    className="bg-gradient-to-r from-pink-500 to-rose-500 h-full rounded-full transition-all duration-1000"
+                    style={{ width: `${Math.min(overallProgress, 100)}%` }}
+                  ></div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {showAdd && (
         <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-2xl animate-in fade-in slide-in-from-top-4">
@@ -156,6 +196,20 @@ const WishlistTracker: React.FC<WishlistTrackerProps> = ({ data, setData, curren
               />
             </div>
             <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Currency</label>
+              <select
+                value={newItem.currency}
+                onChange={e => setNewItem({...newItem, currency: e.target.value})}
+                className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:ring-2 focus:ring-[#EC4899] outline-none transition-all font-semibold"
+              >
+                {(Object.keys(CURRENCIES) as CurrencyCode[]).map(code => (
+                  <option key={code} value={code}>
+                    {CURRENCIES[code].symbol} {code}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Target Date</label>
               <input 
                 type="date" 
@@ -181,6 +235,8 @@ const WishlistTracker: React.FC<WishlistTrackerProps> = ({ data, setData, curren
         {data.wishlist.map((item, index) => {
           const progress = item.cost > 0 ? (item.saved / item.cost) * 100 : 0;
           const isMostUrgent = index === 0;
+          const itemCur = getItemCurrency(item);
+          const itemSym = CURRENCIES[itemCur].symbol;
           
           return (
             <div 
@@ -219,6 +275,7 @@ const WishlistTracker: React.FC<WishlistTrackerProps> = ({ data, setData, curren
                         </div>
                         <div className="flex items-center gap-3 mt-1">
                           <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Rank #{index + 1}</span>
+                          <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">{itemCur}</span>
                           {item.deadline && (
                             <span className="text-[10px] text-pink-500 flex items-center font-bold uppercase tracking-wider">
                               <Calendar className="w-3 h-3 mr-1" />
@@ -242,9 +299,9 @@ const WishlistTracker: React.FC<WishlistTrackerProps> = ({ data, setData, curren
                       <div className="flex justify-between items-end mb-2">
                         <div className="flex items-baseline space-x-2">
                            <p className="text-3xl font-black text-slate-900 tracking-tighter">
-                             {fc(item.saved)}
+                             {formatCurrency(item.saved, itemCur)}
                            </p>
-                           <span className="text-sm font-bold text-slate-300">/ {fc(item.cost)}</span>
+                           <span className="text-sm font-bold text-slate-300">/ {formatCurrency(item.cost, itemCur)}</span>
                         </div>
                         <span className="text-xs font-black text-[#EC4899] bg-pink-50 px-2 py-1 rounded-lg">{Math.round(progress)}%</span>
                       </div>
@@ -258,7 +315,7 @@ const WishlistTracker: React.FC<WishlistTrackerProps> = ({ data, setData, curren
 
                     <div className="flex items-center space-x-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 text-xs font-mono">{sym}</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 text-xs font-mono">{itemSym}</span>
                         <input 
                           type="text"
                           value={pendingWishlistDeposits[item.id] || ''}

@@ -9,11 +9,11 @@ import {
   Menu,
   X,
   PiggyBank,
-  Bell,
   LogOut,
   Loader2,
   UserCircle,
-  Landmark
+  Landmark,
+  ShoppingCart
 } from 'lucide-react';
 import { FinanceData, TabType } from './types';
 import Dashboard from './components/Dashboard';
@@ -23,8 +23,10 @@ import DebtTracker from './components/DebtTracker';
 import SavingsTracker from './components/SavingsTracker';
 import WishlistTracker from './components/WishlistTracker';
 import AccountsTracker from './components/AccountsTracker';
+import SpendingLog from './components/SpendingLog';
 import AIAdvisor from './components/AIAdvisor';
 import Profile from './components/Profile';
+import NotificationPanel from './components/NotificationPanel';
 import LandingPage from './components/LandingPage';
 import { useAuth } from './client/src/hooks/use-auth';
 import { CurrencyCode, CURRENCIES } from './client/src/lib/currency';
@@ -37,6 +39,7 @@ const EMPTY_DATA: FinanceData = {
   debt: [],
   wishlist: [],
   accounts: [],
+  spendingLog: [],
 };
 
 const App: React.FC = () => {
@@ -52,7 +55,7 @@ const App: React.FC = () => {
       const res = await fetch('/api/finance', { credentials: 'include' });
       if (res.ok) {
         const financeData = await res.json();
-        setData({ ...financeData, accounts: financeData.accounts || [] });
+        setData({ ...financeData, accounts: financeData.accounts || [], spendingLog: financeData.spendingLog || [] });
       }
     } catch (error) {
       console.error('Error fetching finance data:', error);
@@ -116,6 +119,7 @@ const App: React.FC = () => {
     { id: 'Outgoings', icon: TrendingDown, label: 'Expenses' },
     { id: 'Savings', icon: PiggyBank, label: 'Savings' },
     { id: 'Debt', icon: CreditCard, label: 'Debt' },
+    { id: 'Spending', icon: ShoppingCart, label: 'Spending' },
     { id: 'Accounts', icon: Landmark, label: 'Accounts' },
     { id: 'Wishlist', icon: Heart, label: 'Wishlist' },
     { id: 'AI Advisor', icon: Sparkles, label: 'ZenAI' },
@@ -129,6 +133,7 @@ const App: React.FC = () => {
       case 'Outgoings': return <OutgoingsTracker data={data} setData={setData} currency={currency} />;
       case 'Savings': return <SavingsTracker data={data} setData={setData} currency={currency} />;
       case 'Debt': return <DebtTracker data={data} setData={setData} currency={currency} />;
+      case 'Spending': return <SpendingLog data={data} setData={setData} currency={currency} />;
       case 'Accounts': return <AccountsTracker data={data} setData={setData} currency={currency} />;
       case 'Wishlist': return <WishlistTracker data={data} setData={setData} currency={currency} />;
       case 'AI Advisor': return <AIAdvisor data={data} />;
@@ -224,9 +229,7 @@ const App: React.FC = () => {
                  <option key={c.code} value={c.code}>{c.symbol} {c.code}</option>
                ))}
              </select>
-             <button className="p-3 bg-white border border-slate-100 rounded-2xl shadow-sm text-slate-400 hover:text-slate-900 transition-colors">
-               <Bell className="w-5 h-5" />
-             </button>
+             <NotificationPanel />
              <button
                onClick={() => setActiveTab('Profile')}
                className="w-12 h-12 rounded-2xl bg-white border border-slate-100 shadow-sm flex items-center justify-center p-1 overflow-hidden hover:ring-2 hover:ring-slate-900 transition-all"

@@ -1,4 +1,3 @@
-
 export type FrequencyType = 'Monthly' | 'Weekly' | 'Bi-Weekly' | 'Yearly' | 'One-time';
 
 export interface IncomeItem {
@@ -7,6 +6,8 @@ export interface IncomeItem {
   amount: number;
   category: string;
   frequency: FrequencyType;
+  currency: string;
+  dayOfMonth?: number | null;
 }
 
 export interface OutgoingItem {
@@ -16,6 +17,9 @@ export interface OutgoingItem {
   category: string;
   date: string;
   frequency: FrequencyType;
+  currency: string;
+  dayOfMonth?: number | null;
+  isRecurring: boolean;
 }
 
 export interface DebtItem {
@@ -26,6 +30,7 @@ export interface DebtItem {
   minPayment: number;
   priority: 'Low' | 'Medium' | 'High';
   deadline?: string;
+  currency: string;
 }
 
 export interface SavingsItem {
@@ -34,6 +39,7 @@ export interface SavingsItem {
   balance: number;
   target?: number;
   category: string;
+  currency: string;
 }
 
 export interface WishlistItem {
@@ -43,6 +49,7 @@ export interface WishlistItem {
   saved: number;
   priority: 'Low' | 'Medium' | 'High';
   deadline?: string;
+  currency: string;
 }
 
 export interface AccountItem {
@@ -53,7 +60,26 @@ export interface AccountItem {
   currency: string;
 }
 
-export type TabType = 'Dashboard' | 'Income' | 'Outgoings' | 'Savings' | 'Debt' | 'Wishlist' | 'Accounts' | 'AI Advisor' | 'Profile';
+export interface SpendingLogItem {
+  id: string;
+  description: string;
+  amount: number;
+  currency: string;
+  category: string;
+  date: string;
+}
+
+export interface NotificationItem {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  read: boolean;
+  relatedId?: string | null;
+  createdAt: string;
+}
+
+export type TabType = 'Dashboard' | 'Income' | 'Outgoings' | 'Savings' | 'Debt' | 'Wishlist' | 'Accounts' | 'Spending' | 'AI Advisor' | 'Profile';
 
 export interface FinanceData {
   income: IncomeItem[];
@@ -62,4 +88,5 @@ export interface FinanceData {
   debt: DebtItem[];
   wishlist: WishlistItem[];
   accounts: AccountItem[];
+  spendingLog: SpendingLogItem[];
 }

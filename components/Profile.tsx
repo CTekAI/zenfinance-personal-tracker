@@ -28,10 +28,13 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
 
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoError, setPhotoError] = useState('');
+  const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
 
   const initials = user.firstName
     ? (user.firstName[0] + (user.lastName?.[0] || '')).toUpperCase()
     : (user.email?.[0] || 'U').toUpperCase();
+
+  const displayImageUrl = localPreviewUrl || user.profileImageUrl;
 
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,6 +116,9 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const previewUrl = URL.createObjectURL(file);
+    setLocalPreviewUrl(previewUrl);
+
     setPhotoError('');
     setPhotoUploading(true);
 
@@ -129,11 +135,17 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
       const data = await res.json();
       if (!res.ok) {
         setPhotoError(data.message || 'Failed to upload photo');
+        setLocalPreviewUrl(null);
       } else {
         await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+        setTimeout(() => {
+          setLocalPreviewUrl(null);
+          URL.revokeObjectURL(previewUrl);
+        }, 500);
       }
     } catch {
       setPhotoError('Network error. Please try again.');
+      setLocalPreviewUrl(null);
     } finally {
       setPhotoUploading(false);
       if (fileInputRef.current) {
@@ -149,9 +161,14 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
         <div className="flex items-center gap-6">
           <div className="relative group">
             <div className="w-24 h-24 rounded-3xl bg-slate-50 border-2 border-slate-100 flex items-center justify-center overflow-hidden">
-              {user.profileImageUrl ? (
+              {photoUploading && (
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10 rounded-3xl">
+                  <Loader2 className="w-8 h-8 text-white animate-spin" />
+                </div>
+              )}
+              {displayImageUrl ? (
                 <img
-                  src={user.profileImageUrl}
+                  src={displayImageUrl}
                   alt="Profile"
                   className="w-full h-full object-cover"
                 />
@@ -166,11 +183,7 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
               disabled={photoUploading}
               className="absolute -bottom-2 -right-2 w-10 h-10 bg-slate-900 text-white rounded-2xl flex items-center justify-center hover:bg-slate-800 transition-colors shadow-lg disabled:opacity-50"
             >
-              {photoUploading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Camera className="w-4 h-4" />
-              )}
+              <Camera className="w-4 h-4" />
             </button>
             <input
               ref={fileInputRef}

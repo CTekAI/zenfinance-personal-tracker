@@ -1,4 +1,4 @@
-import type { FinanceData, IncomeItem, OutgoingItem, SavingsItem, DebtItem, WishlistItem, AccountItem } from '../../../types';
+import type { FinanceData, IncomeItem, OutgoingItem, SavingsItem, DebtItem, WishlistItem, AccountItem, SpendingLogItem, NotificationItem } from '../../../types';
 
 async function apiCall<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -92,6 +92,30 @@ export async function deleteAccount(id: string): Promise<void> {
   await apiCall(`/api/finance/accounts/${id}`, { method: 'DELETE' });
 }
 
+export async function deductFromAccount(id: string, amount: number): Promise<AccountItem> {
+  return apiCall<AccountItem>(`/api/finance/accounts/${id}/deduct`, { method: 'POST', body: JSON.stringify({ amount }) });
+}
+
 export async function updateCurrency(currency: string): Promise<{ currency: string }> {
   return apiCall<{ currency: string }>('/api/auth/currency', { method: 'PUT', body: JSON.stringify({ currency }) });
+}
+
+export async function addSpending(item: Omit<SpendingLogItem, 'id'>): Promise<SpendingLogItem> {
+  return apiCall<SpendingLogItem>('/api/finance/spending', { method: 'POST', body: JSON.stringify(item) });
+}
+
+export async function deleteSpending(id: string): Promise<void> {
+  await apiCall(`/api/finance/spending/${id}`, { method: 'DELETE' });
+}
+
+export async function fetchNotifications(): Promise<NotificationItem[]> {
+  return apiCall<NotificationItem[]>('/api/notifications');
+}
+
+export async function markNotificationRead(id: string): Promise<void> {
+  await apiCall(`/api/notifications/${id}/read`, { method: 'PUT' });
+}
+
+export async function markAllNotificationsRead(): Promise<void> {
+  await apiCall('/api/notifications/mark-all-read', { method: 'POST' });
 }
