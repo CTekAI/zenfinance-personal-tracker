@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Landmark, Pencil, X, Building2, CreditCard, Wallet, PiggyBank } from 'lucide-react';
+import { Plus, Trash2, Landmark, Pencil, X, Building2, CreditCard, Wallet, PiggyBank, GripVertical, Check } from 'lucide-react';
 import { FinanceData, AccountItem } from '../types';
 import { addAccount, updateAccount, deleteAccount } from '../client/src/lib/api';
 import { formatCurrency, CurrencyCode, CURRENCIES } from '../client/src/lib/currency';
@@ -12,13 +12,13 @@ interface AccountsTrackerProps {
 
 const ACCOUNT_TYPES = ['Checking', 'Savings', 'Credit Card', 'Investment', 'Cash', 'Other'];
 
-const accountTypeIcon = (type: string) => {
+const accountTypeIcon = (type: string, size: string = 'w-6 h-6') => {
   switch (type) {
-    case 'Checking': return <Building2 className="w-7 h-7" />;
-    case 'Savings': return <PiggyBank className="w-7 h-7" />;
-    case 'Credit Card': return <CreditCard className="w-7 h-7" />;
-    case 'Investment': return <Landmark className="w-7 h-7" />;
-    default: return <Wallet className="w-7 h-7" />;
+    case 'Checking': return <Building2 className={size} />;
+    case 'Savings': return <PiggyBank className={size} />;
+    case 'Credit Card': return <CreditCard className={size} />;
+    case 'Investment': return <Landmark className={size} />;
+    default: return <Wallet className={size} />;
   }
 };
 
@@ -27,6 +27,7 @@ const AccountsTracker: React.FC<AccountsTrackerProps> = ({ data, setData, curren
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newItem, setNewItem] = useState({ name: '', type: ACCOUNT_TYPES[0], balance: '', currency: currency });
   const [editItem, setEditItem] = useState({ name: '', type: '', balance: '', currency: '' });
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   const cleanNumber = (val: string) => {
     const parsed = parseFloat(val.replace(/[^0-9.-]/g, ''));
@@ -77,6 +78,27 @@ const AccountsTracker: React.FC<AccountsTrackerProps> = ({ data, setData, curren
   const startEdit = (item: AccountItem) => {
     setEditingId(item.id);
     setEditItem({ name: item.name, type: item.type, balance: String(item.balance), currency: item.currency });
+  };
+
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+
+    const newList = [...accounts];
+    const itemToMove = newList[draggedIndex];
+    newList.splice(draggedIndex, 1);
+    newList.splice(index, 0, itemToMove);
+
+    setData(prev => ({ ...prev, accounts: newList }));
+    setDraggedIndex(index);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
   };
 
   const accounts = data.accounts || [];
@@ -182,80 +204,97 @@ const AccountsTracker: React.FC<AccountsTrackerProps> = ({ data, setData, curren
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {accounts.map(item => (
-          <div key={item.id} className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm group hover:border-indigo-200 transition-all">
-            {editingId === item.id ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <input
-                    type="text"
-                    value={editItem.name}
-                    onChange={e => setEditItem({ ...editItem, name: e.target.value })}
-                    className="p-3 rounded-xl bg-slate-50 border border-slate-100 font-semibold focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                  <select
-                    value={editItem.type}
-                    onChange={e => setEditItem({ ...editItem, type: e.target.value })}
-                    className="p-3 rounded-xl bg-slate-50 border border-slate-100 font-semibold focus:ring-2 focus:ring-indigo-500 outline-none"
-                  >
-                    {ACCOUNT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                  <input
-                    type="text"
-                    value={editItem.balance}
-                    onChange={e => setEditItem({ ...editItem, balance: e.target.value })}
-                    className="p-3 rounded-xl bg-slate-50 border border-slate-100 font-mono font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                  <select
-                    value={editItem.currency}
-                    onChange={e => setEditItem({ ...editItem, currency: e.target.value })}
-                    className="p-3 rounded-xl bg-slate-50 border border-slate-100 font-semibold focus:ring-2 focus:ring-indigo-500 outline-none"
-                  >
-                    {Object.values(CURRENCIES).map(c => (
-                      <option key={c.code} value={c.code}>{c.symbol} {c.code}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex justify-end space-x-3">
-                  <button onClick={() => setEditingId(null)} className="px-4 py-2 text-slate-400 font-bold hover:text-slate-900"><X className="w-4 h-4" /></button>
-                  <button onClick={() => handleEdit(item.id)} className="bg-indigo-600 text-white px-6 py-2 rounded-xl font-bold text-sm">Save</button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="flex justify-between items-start mb-6">
-                  <div className="flex items-center space-x-5">
-                    <div className="w-16 h-16 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100">
+      <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+        {accounts.length > 0 ? (
+          <div className="divide-y divide-slate-100">
+            {accounts.map((item, index) => (
+              <div
+                key={item.id}
+                draggable={editingId !== item.id}
+                onDragStart={() => handleDragStart(index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDragEnd={handleDragEnd}
+                className={`group transition-all ${draggedIndex === index ? 'opacity-50 bg-indigo-50' : 'hover:bg-slate-50/50'}`}
+              >
+                {editingId === item.id ? (
+                  <div className="px-8 py-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <input
+                        type="text"
+                        value={editItem.name}
+                        onChange={e => setEditItem({ ...editItem, name: e.target.value })}
+                        placeholder="Account name"
+                        className="p-3 rounded-xl bg-slate-50 border border-slate-100 font-semibold focus:ring-2 focus:ring-indigo-500 outline-none"
+                      />
+                      <select
+                        value={editItem.type}
+                        onChange={e => setEditItem({ ...editItem, type: e.target.value })}
+                        className="p-3 rounded-xl bg-slate-50 border border-slate-100 font-semibold focus:ring-2 focus:ring-indigo-500 outline-none"
+                      >
+                        {ACCOUNT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                      <input
+                        type="text"
+                        value={editItem.balance}
+                        onChange={e => setEditItem({ ...editItem, balance: e.target.value })}
+                        placeholder="Balance"
+                        className="p-3 rounded-xl bg-slate-50 border border-slate-100 font-mono font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
+                      />
+                      <select
+                        value={editItem.currency}
+                        onChange={e => setEditItem({ ...editItem, currency: e.target.value })}
+                        className="p-3 rounded-xl bg-slate-50 border border-slate-100 font-semibold focus:ring-2 focus:ring-indigo-500 outline-none"
+                      >
+                        {Object.values(CURRENCIES).map(c => (
+                          <option key={c.code} value={c.code}>{c.symbol} {c.code}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex justify-end space-x-3 mt-4">
+                      <button onClick={() => setEditingId(null)} className="px-4 py-2 text-slate-400 font-bold hover:text-slate-900 transition-colors text-sm">Cancel</button>
+                      <button onClick={() => handleEdit(item.id)} className="bg-indigo-600 text-white px-6 py-2 rounded-xl font-bold text-sm flex items-center gap-2 active:scale-95 transition-all">
+                        <Check className="w-4 h-4" />
+                        Save
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center px-6 py-5 cursor-grab active:cursor-grabbing">
+                    <div className="text-slate-200 group-hover:text-slate-400 transition-colors mr-4 flex-shrink-0">
+                      <GripVertical className="w-5 h-5" />
+                    </div>
+
+                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100 flex-shrink-0 mr-5">
                       {accountTypeIcon(item.type)}
                     </div>
-                    <div>
-                      <h4 className="font-black text-slate-900 text-xl tracking-tight leading-tight">{item.name}</h4>
+
+                    <div className="flex-1 min-w-0 mr-6">
+                      <h4 className="font-black text-slate-900 text-lg tracking-tight leading-tight truncate">{item.name}</h4>
                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.type}</span>
                     </div>
-                  </div>
-                  <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-all">
-                    <button onClick={() => startEdit(item)} className="text-slate-300 hover:text-indigo-500 p-2">
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => handleDelete(item.id)} className="text-slate-300 hover:text-rose-500 p-2">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Balance</p>
-                  <h3 className="text-3xl font-black text-slate-900 tracking-tighter">
-                    {formatCurrency(item.balance, item.currency as CurrencyCode)}
-                  </h3>
-                </div>
-              </>
-            )}
-          </div>
-        ))}
 
-        {accounts.length === 0 && (
-          <div className="md:col-span-2 py-24 bg-white rounded-[2.5rem] border border-dashed border-slate-200 flex flex-col items-center justify-center text-center">
+                    <div className="flex-shrink-0 text-right mr-6">
+                      <h3 className="text-2xl font-black text-slate-900 tracking-tighter">
+                        {formatCurrency(item.balance, item.currency as CurrencyCode)}
+                      </h3>
+                      <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{item.currency}</span>
+                    </div>
+
+                    <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0">
+                      <button onClick={() => startEdit(item)} className="text-slate-300 hover:text-indigo-500 p-2 rounded-xl hover:bg-indigo-50 transition-all">
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDelete(item.id)} className="text-slate-300 hover:text-rose-500 p-2 rounded-xl hover:bg-rose-50 transition-all">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="py-24 flex flex-col items-center justify-center text-center">
             <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mb-6">
               <Landmark className="w-10 h-10 text-indigo-200" />
             </div>
