@@ -162,7 +162,7 @@ const WishlistTracker: React.FC<WishlistTrackerProps> = ({ data, setData, curren
       )}
 
       {showAdd && (
-        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-2xl animate-in fade-in slide-in-from-top-4">
+        <div className="bg-white p-5 sm:p-8 rounded-[2.5rem] border border-slate-100 shadow-2xl animate-in fade-in slide-in-from-top-4">
           <h3 className="text-xl font-black text-slate-900 mb-6 tracking-tight">New Financial Goal</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="space-y-2">

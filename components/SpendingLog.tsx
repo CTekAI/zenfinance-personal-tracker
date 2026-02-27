@@ -121,7 +121,7 @@ const SpendingLog: React.FC<SpendingLogProps> = ({ data, setData, currency }) =>
         <p className="text-slate-500 text-sm">Quick-log your daily purchases</p>
       </div>
 
-      <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6">
+      <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-4 sm:p-6">
         <div className="flex items-center justify-between mb-4">
           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Today's Total</p>
         </div>
@@ -145,7 +145,7 @@ const SpendingLog: React.FC<SpendingLogProps> = ({ data, setData, currency }) =>
 
       <form
         onSubmit={handleSubmit}
-        className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6"
+        className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-4 sm:p-6"
       >
         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Quick Add</p>
         <div className="flex flex-col sm:flex-row gap-3">
@@ -242,7 +242,7 @@ const SpendingLog: React.FC<SpendingLogProps> = ({ data, setData, currency }) =>
                           <IconComponent className="w-5 h-5" style={{ color }} />
                         </div>
                         <div>
-                          <p className="font-bold text-slate-900 text-sm">{item.description}</p>
+                          <p className="font-bold text-slate-900 text-sm truncate">{item.description}</p>
                           <p className="text-xs text-slate-400">
                             {item.category} · {new Date(item.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                           </p>
@@ -254,7 +254,7 @@ const SpendingLog: React.FC<SpendingLogProps> = ({ data, setData, currency }) =>
                         </span>
                         <button
                           onClick={() => handleDelete(item.id)}
-                          className="opacity-0 group-hover:opacity-100 p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                          className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>

@@ -128,7 +128,7 @@ const IncomeTracker: React.FC<IncomeTrackerProps> = ({ data, setData, currency }
       )}
 
       {showAdd && (
-        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-2xl animate-in fade-in slide-in-from-top-4">
+        <div className="bg-white p-5 sm:p-8 rounded-[2.5rem] border border-slate-100 shadow-2xl animate-in fade-in slide-in-from-top-4">
           <h3 className="text-xl font-black text-slate-900 mb-6 tracking-tight">New Income Stream</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
@@ -218,14 +218,14 @@ const IncomeTracker: React.FC<IncomeTrackerProps> = ({ data, setData, currency }
         {data.income.map(item => {
           const itemCurrency = (item.currency || currency) as CurrencyCode;
           return (
-            <div key={item.id} className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm relative group hover:border-slate-300 transition-all">
+            <div key={item.id} className="bg-white p-5 sm:p-8 rounded-[2rem] border border-slate-100 shadow-sm relative group hover:border-slate-300 transition-all">
               <div className="flex justify-between items-start mb-6">
                 <div className="w-14 h-14 rounded-full bg-[#5CC8BE]/10 flex items-center justify-center text-[#5CC8BE]">
                   <Wallet className="w-7 h-7" />
                 </div>
                 <button 
                   onClick={() => removeIncome(item.id)}
-                  className="text-slate-200 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all p-2"
+                  className="text-slate-200 hover:text-rose-500 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all p-2"
                 >
                   <Trash2 className="w-5 h-5" />
                 </button>
@@ -256,7 +256,7 @@ const IncomeTracker: React.FC<IncomeTrackerProps> = ({ data, setData, currency }
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
                     {item.frequency === 'One-time' ? 'Amount' : `${item.frequency} Flow`}
                   </p>
-                  <h3 className="text-3xl font-black text-slate-900 tracking-tighter">
+                  <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tighter">
                     {formatCurrency(item.amount, itemCurrency)}
                   </h3>
                 </div>

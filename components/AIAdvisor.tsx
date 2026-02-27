@@ -90,7 +90,7 @@ const AIAdvisor: React.FC<AIAdvisorProps> = ({ data }) => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-12rem)] bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden animate-in fade-in duration-500">
-      <div className="p-6 border-b border-slate-100 flex items-center space-x-4 bg-white/50 backdrop-blur-sm z-10">
+      <div className="p-4 sm:p-6 border-b border-slate-100 flex items-center space-x-4 bg-white/50 backdrop-blur-sm z-10">
         <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200">
           <Sparkles className="w-6 h-6" />
         </div>
@@ -103,7 +103,7 @@ const AIAdvisor: React.FC<AIAdvisorProps> = ({ data }) => {
         </div>
       </div>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/50">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-slate-50/50">
         {messages.length === 0 && (
           <div className="h-full flex flex-col items-center justify-center text-center max-w-sm mx-auto space-y-6">
             <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center border border-slate-100 shadow-sm">
@@ -135,7 +135,7 @@ const AIAdvisor: React.FC<AIAdvisorProps> = ({ data }) => {
               }`}>
                 {m.role === 'user' ? <User className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
               </div>
-              <div className={`p-5 rounded-[1.5rem] text-sm leading-relaxed shadow-sm ${
+              <div className={`p-3 sm:p-5 rounded-[1.5rem] text-sm leading-relaxed shadow-sm ${
                 m.role === 'user' 
                   ? 'bg-indigo-600 text-white rounded-tr-none whitespace-pre-wrap' 
                   : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none'
@@ -155,7 +155,7 @@ const AIAdvisor: React.FC<AIAdvisorProps> = ({ data }) => {
         )}
       </div>
 
-      <div className="p-6 bg-white border-t border-slate-100">
+      <div className="p-4 sm:p-6 bg-white border-t border-slate-100">
         <div className="flex items-center space-x-3 bg-slate-50 p-2 rounded-[1.5rem] border border-slate-200 focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
           <input 
             type="text" 

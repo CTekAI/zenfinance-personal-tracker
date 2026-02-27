@@ -156,9 +156,9 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
 
   return (
     <div className="space-y-8 max-w-2xl">
-      <div className="bg-white rounded-[2rem] border border-slate-100 p-8">
+      <div className="bg-white rounded-[2rem] border border-slate-100 p-5 sm:p-8">
         <h3 className="text-lg font-black text-slate-900 tracking-tight mb-6">Profile Photo</h3>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4 sm:gap-6">
           <div className="relative group">
             <div className="w-24 h-24 rounded-3xl bg-slate-50 border-2 border-slate-100 flex items-center justify-center overflow-hidden">
               {photoUploading && (
@@ -203,7 +203,7 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
         </div>
       </div>
 
-      <div className="bg-white rounded-[2rem] border border-slate-100 p-8">
+      <div className="bg-white rounded-[2rem] border border-slate-100 p-5 sm:p-8">
         <h3 className="text-lg font-black text-slate-900 tracking-tight mb-6">Personal Information</h3>
         <form onSubmit={handleProfileSave} className="space-y-4">
           <div>
@@ -280,7 +280,7 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
         </form>
       </div>
 
-      <div className="bg-white rounded-[2rem] border border-slate-100 p-8">
+      <div className="bg-white rounded-[2rem] border border-slate-100 p-5 sm:p-8">
         <h3 className="text-lg font-black text-slate-900 tracking-tight mb-2">Change Password</h3>
         <p className="text-sm text-slate-400 mb-6">Update your password to keep your account secure.</p>
         <form onSubmit={handlePasswordChange} className="space-y-4">

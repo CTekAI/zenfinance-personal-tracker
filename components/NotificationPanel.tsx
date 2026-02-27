@@ -110,7 +110,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ onNotificationCli
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-96 max-h-[480px] bg-white border border-slate-100 rounded-2xl shadow-xl z-50 flex flex-col overflow-hidden">
+        <div className="absolute right-0 sm:right-0 left-auto top-full mt-2 w-[calc(100vw-2rem)] sm:w-96 max-h-[480px] bg-white border border-slate-100 rounded-2xl shadow-xl z-50 flex flex-col overflow-hidden">
           <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
             <h3 className="font-bold text-slate-900 text-sm tracking-tight">Notifications</h3>
             {unreadCount > 0 && (
@@ -152,7 +152,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ onNotificationCli
                         </p>
                         <button
                           onClick={() => handleDismiss(notification.id)}
-                          className="ml-2 p-1 text-slate-300 hover:text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                          className="ml-2 p-1 text-slate-300 hover:text-slate-500 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0"
                         >
                           <X className="w-3.5 h-3.5" />
                         </button>

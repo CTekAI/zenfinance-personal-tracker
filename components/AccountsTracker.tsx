@@ -127,12 +127,12 @@ const AccountsTracker: React.FC<AccountsTrackerProps> = ({ data, setData, curren
         </button>
       </div>
 
-      <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 rounded-[2.5rem] p-10 text-white shadow-2xl shadow-indigo-200/50">
+      <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 rounded-[2.5rem] p-6 sm:p-10 text-white shadow-2xl shadow-indigo-200/50">
         <div className="relative z-10">
           <p className="text-indigo-200 text-xs font-bold uppercase tracking-widest mb-2">
             {hasMixedCurrencies ? `Balance (${currency} accounts)` : 'Total Balance'}
           </p>
-          <h2 className="text-6xl font-black tracking-tighter mb-4">
+          <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tighter mb-4">
             {formatCurrency(hasMixedCurrencies ? totalInSelectedCurrency : accounts.reduce((s, a) => s + a.balance, 0), currency)}
           </h2>
           {hasMixedCurrencies && (
@@ -151,7 +151,7 @@ const AccountsTracker: React.FC<AccountsTrackerProps> = ({ data, setData, curren
       </div>
 
       {showAdd && (
-        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-2xl animate-in fade-in slide-in-from-top-4">
+        <div className="bg-white p-5 sm:p-8 rounded-[2.5rem] border border-slate-100 shadow-2xl animate-in fade-in slide-in-from-top-4">
           <h3 className="text-xl font-black text-slate-900 mb-6 tracking-tight">Add New Account</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="space-y-2">
@@ -274,13 +274,13 @@ const AccountsTracker: React.FC<AccountsTrackerProps> = ({ data, setData, curren
                     </div>
 
                     <div className="flex-shrink-0 text-right mr-6">
-                      <h3 className="text-2xl font-black text-slate-900 tracking-tighter">
+                      <h3 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tighter">
                         {formatCurrency(item.balance, item.currency as CurrencyCode)}
                       </h3>
                       <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{item.currency}</span>
                     </div>
 
-                    <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0">
+                    <div className="flex items-center space-x-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all flex-shrink-0">
                       <button onClick={() => startEdit(item)} className="text-slate-300 hover:text-indigo-500 p-2 rounded-xl hover:bg-indigo-50 transition-all">
                         <Pencil className="w-4 h-4" />
                       </button>

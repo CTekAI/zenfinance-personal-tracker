@@ -241,7 +241,7 @@ const OutgoingsTracker: React.FC<OutgoingsTrackerProps> = ({ data, setData, curr
       )}
 
       {showAdd && (
-        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-2xl animate-in fade-in slide-in-from-top-4">
+        <div className="bg-white p-5 sm:p-8 rounded-[2.5rem] border border-slate-100 shadow-2xl animate-in fade-in slide-in-from-top-4">
           <h3 className="text-xl font-black text-slate-900 mb-6 tracking-tight">Log Transaction</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="space-y-2">
@@ -341,17 +341,17 @@ const OutgoingsTracker: React.FC<OutgoingsTrackerProps> = ({ data, setData, curr
               return (
                 <div 
                   key={item.id} 
-                  className={`flex items-center justify-between p-5 hover:bg-slate-50 rounded-[1.5rem] transition-all group ${idx !== filteredOutgoings.length - 1 ? 'border-b border-slate-50' : ''}`}
+                  className={`flex items-center justify-between p-3 sm:p-5 hover:bg-slate-50 rounded-[1.5rem] transition-all group ${idx !== filteredOutgoings.length - 1 ? 'border-b border-slate-50' : ''}`}
                 >
                   <div className="flex items-center space-x-5">
                     <div
-                      className="w-14 h-14 rounded-full flex items-center justify-center group-hover:shadow-sm transition-all"
+                      className="w-10 h-10 sm:w-14 sm:h-14 rounded-full flex items-center justify-center group-hover:shadow-sm transition-all"
                       style={{ backgroundColor: color + '15', border: `2px solid ${color}30` }}
                     >
-                      <Icon className="w-6 h-6" style={{ color }} />
+                      <Icon className="w-5 h-5 sm:w-6 sm:h-6" style={{ color }} />
                     </div>
                     <div>
-                      <h4 className="font-black text-slate-900 text-base leading-none mb-1.5 tracking-tight">{item.description}</h4>
+                      <h4 className="font-black text-slate-900 text-base leading-none mb-1.5 tracking-tight min-w-0 truncate">{item.description}</h4>
                       <div className="flex items-center space-x-2">
                         <span
                           className="inline-flex items-center space-x-1 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full"
@@ -361,11 +361,11 @@ const OutgoingsTracker: React.FC<OutgoingsTrackerProps> = ({ data, setData, curr
                           <span>{item.category}</span>
                         </span>
                         <span className="w-1 h-1 rounded-full bg-slate-200"></span>
-                        <span className="text-[10px] font-bold text-slate-400">{item.date}</span>
+                        <span className="hidden sm:inline-flex text-[10px] font-bold text-slate-400">{item.date}</span>
                         {item.dayOfMonth && (
                           <>
                             <span className="w-1 h-1 rounded-full bg-slate-200"></span>
-                            <span className="text-[10px] font-bold text-slate-400 flex items-center space-x-0.5">
+                            <span className="hidden sm:inline-flex text-[10px] font-bold text-slate-400 items-center space-x-0.5">
                               <Calendar className="w-3 h-3" />
                               <span>{item.dayOfMonth}{item.dayOfMonth === 1 ? 'st' : item.dayOfMonth === 2 ? 'nd' : item.dayOfMonth === 3 ? 'rd' : 'th'}</span>
                             </span>
@@ -383,7 +383,7 @@ const OutgoingsTracker: React.FC<OutgoingsTrackerProps> = ({ data, setData, curr
                     </div>
                     <button 
                       onClick={() => removeOutgoing(item.id)}
-                      className="p-2 text-slate-200 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"
+                      className="p-2 text-slate-200 hover:text-rose-500 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

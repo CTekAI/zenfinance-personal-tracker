@@ -141,7 +141,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, currency }) => {
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+        <div className="bg-white p-4 sm:p-6 rounded-[2rem] border border-slate-100 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
               <ArrowUpRight className="w-5 h-5 text-emerald-600" />
@@ -149,10 +149,10 @@ const Dashboard: React.FC<DashboardProps> = ({ data, currency }) => {
             <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">In</span>
           </div>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Incoming</p>
-          <h3 className="text-2xl font-black text-slate-900 tracking-tighter">{fc(totalIncoming)}</h3>
+          <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tighter">{fc(totalIncoming)}</h3>
         </div>
 
-        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+        <div className="bg-white p-4 sm:p-6 rounded-[2rem] border border-slate-100 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center">
               <ArrowDownRight className="w-5 h-5 text-rose-600" />
@@ -160,10 +160,10 @@ const Dashboard: React.FC<DashboardProps> = ({ data, currency }) => {
             <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest">Out</span>
           </div>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Outgoing</p>
-          <h3 className="text-2xl font-black text-slate-900 tracking-tighter">{fc(totalExpenses + totalSpending)}</h3>
+          <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tighter">{fc(totalExpenses + totalSpending)}</h3>
         </div>
 
-        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+        <div className="bg-white p-4 sm:p-6 rounded-[2rem] border border-slate-100 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center">
               <PiggyBank className="w-5 h-5 text-indigo-600" />
@@ -171,10 +171,10 @@ const Dashboard: React.FC<DashboardProps> = ({ data, currency }) => {
             <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Saved</span>
           </div>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Savings</p>
-          <h3 className="text-2xl font-black text-slate-900 tracking-tighter">{fc(totalSavingsBalance)}</h3>
+          <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tighter">{fc(totalSavingsBalance)}</h3>
         </div>
 
-        <div className={`p-6 rounded-[2rem] border shadow-sm ${isPositiveFlow ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
+        <div className={`p-4 sm:p-6 rounded-[2rem] border shadow-sm ${isPositiveFlow ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
           <div className="flex items-center justify-between mb-4">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isPositiveFlow ? 'bg-emerald-100' : 'bg-rose-100'}`}>
               <Coins className={`w-5 h-5 ${isPositiveFlow ? 'text-emerald-600' : 'text-rose-600'}`} />
@@ -184,7 +184,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, currency }) => {
             </span>
           </div>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Available</p>
-          <h3 className={`text-2xl font-black tracking-tighter ${isPositiveFlow ? 'text-emerald-700' : 'text-rose-700'}`}>
+          <h3 className={`text-xl sm:text-2xl font-black tracking-tighter ${isPositiveFlow ? 'text-emerald-700' : 'text-rose-700'}`}>
             {fc(Math.abs(availableMoney))}
           </h3>
         </div>
@@ -193,20 +193,20 @@ const Dashboard: React.FC<DashboardProps> = ({ data, currency }) => {
       {Object.keys(currencyGroups).length > 0 && (
         <div className="flex flex-wrap gap-3">
           {Object.entries(currencyGroups).map(([cur, balance]) => (
-            <div key={cur} className="bg-white px-6 py-4 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
+            <div key={cur} className="bg-white px-4 sm:px-6 py-3 sm:py-4 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center">
                 <span className="text-white text-xs font-black">{CURRENCIES[cur as CurrencyCode]?.symbol || cur}</span>
               </div>
               <div>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{cur}</p>
-                <p className="text-lg font-black text-slate-900 tracking-tighter">{formatCurrency(balance, cur as CurrencyCode)}</p>
+                <p className="text-base sm:text-lg font-black text-slate-900 tracking-tighter">{formatCurrency(balance, cur as CurrencyCode)}</p>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      <div className={`p-6 rounded-[2rem] border ${isPositiveFlow ? 'bg-emerald-50/50 border-emerald-100' : 'bg-rose-50/50 border-rose-100'} flex items-center justify-between`}>
+      <div className={`p-4 sm:p-6 rounded-[2rem] border ${isPositiveFlow ? 'bg-emerald-50/50 border-emerald-100' : 'bg-rose-50/50 border-rose-100'} flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3`}>
         <div className="flex items-center gap-4">
           {isPositiveFlow ? (
             <TrendingUp className="w-8 h-8 text-emerald-500" />
@@ -228,7 +228,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, currency }) => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative">
+        <div className="bg-white p-5 sm:p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative">
           <div className="flex justify-between items-center mb-6">
             <h3 className="font-black text-slate-900 text-xl tracking-tight">Spending Breakdown</h3>
             <span className="text-xs font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">This Month</span>
@@ -236,15 +236,15 @@ const Dashboard: React.FC<DashboardProps> = ({ data, currency }) => {
           
           {categorySpending.length > 0 ? (
             <>
-              <div className="h-[280px] relative">
+              <div className="h-[200px] sm:h-[280px] relative">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={categorySpending}
                       cx="50%"
                       cy="50%"
-                      innerRadius={90}
-                      outerRadius={120}
+                      innerRadius={60}
+                      outerRadius={85}
                       paddingAngle={6}
                       dataKey="value"
                       stroke="none"
@@ -260,7 +260,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, currency }) => {
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <p className="text-2xl font-black text-slate-900 tracking-tighter">{fc(totalExpenses + totalSpending)}</p>
+                  <p className="text-lg sm:text-2xl font-black text-slate-900 tracking-tighter">{fc(totalExpenses + totalSpending)}</p>
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Total</p>
                 </div>
               </div>
@@ -287,7 +287,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, currency }) => {
           )}
         </div>
 
-        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+        <div className="bg-white p-5 sm:p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
           <div className="flex justify-between items-center mb-6">
             <h3 className="font-black text-slate-900 text-xl tracking-tight">Upcoming Expenses</h3>
             <Calendar className="w-5 h-5 text-slate-300" />
@@ -328,18 +328,18 @@ const Dashboard: React.FC<DashboardProps> = ({ data, currency }) => {
         </div>
       </div>
 
-      <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+      <div className="bg-white p-5 sm:p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
         <div className="flex justify-between items-center mb-6">
           <h3 className="font-black text-slate-900 text-xl tracking-tight">Income vs Expenses</h3>
           <span className="text-xs font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">Last 6 Months</span>
         </div>
         {trendData.length > 0 && (trendData.some(d => d.income > 0 || d.expenses > 0)) ? (
-          <div className="h-[280px]">
+          <div className="h-[200px] sm:h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trendData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
                 <XAxis dataKey="month" tick={{ fontSize: 12, fontWeight: 600, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 12, fontWeight: 600, fill: '#94A3B8' }} axisLine={false} tickLine={false} tickFormatter={(v) => fc(v)} width={80} />
+                <YAxis tick={{ fontSize: 12, fontWeight: 600, fill: '#94A3B8' }} axisLine={false} tickLine={false} tickFormatter={(v) => fc(v)} width={60} />
                 <Tooltip 
                   contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', fontSize: '13px', fontWeight: 600 }}
                   formatter={(value: number, name: string) => [fc(value), name === 'income' ? 'Income' : 'Expenses']}

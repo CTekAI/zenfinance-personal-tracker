@@ -121,7 +121,7 @@ const SavingsTracker: React.FC<SavingsTrackerProps> = ({ data, setData, currency
         </button>
       </div>
 
-      <div className="relative overflow-hidden bg-slate-900 rounded-[2.5rem] p-10 text-white shadow-2xl shadow-slate-200">
+      <div className="relative overflow-hidden bg-slate-900 rounded-[2.5rem] p-6 sm:p-10 text-white shadow-2xl shadow-slate-200">
         <div className="relative z-10">
           <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-4">Totals by Currency</p>
           {currencyKeys.length === 0 ? (
@@ -131,7 +131,7 @@ const SavingsTracker: React.FC<SavingsTrackerProps> = ({ data, setData, currency
               {currencyKeys.map((cur, i) => (
                 <React.Fragment key={cur}>
                   {i > 0 && <span className="text-slate-600 text-2xl font-light">|</span>}
-                  <h2 className="text-4xl md:text-5xl font-black tracking-tighter">
+                  <h2 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tighter">
                     {formatCurrency(currencyTotals[cur], cur as CurrencyCode)}
                   </h2>
                 </React.Fragment>
@@ -153,7 +153,7 @@ const SavingsTracker: React.FC<SavingsTrackerProps> = ({ data, setData, currency
       </div>
 
       {showAdd && (
-        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-2xl animate-in fade-in slide-in-from-top-4">
+        <div className="bg-white p-5 sm:p-8 rounded-[2.5rem] border border-slate-100 shadow-2xl animate-in fade-in slide-in-from-top-4">
           <h3 className="text-xl font-black text-slate-900 mb-6 tracking-tight">New Savings Pot</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-2">
@@ -212,7 +212,7 @@ const SavingsTracker: React.FC<SavingsTrackerProps> = ({ data, setData, currency
                 const itemCur = (item.currency || 'USD') as CurrencyCode;
                 const sym = (CURRENCIES[itemCur] || CURRENCIES['USD']).symbol;
                 return (
-                  <div key={item.id} className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm group hover:border-slate-300 transition-all">
+                  <div key={item.id} className="bg-white p-5 sm:p-8 rounded-[2rem] border border-slate-100 shadow-sm group hover:border-slate-300 transition-all">
                     <div className="flex justify-between items-start mb-8">
                       <div className="flex items-center space-x-5">
                         <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center text-slate-900 border border-slate-100">
@@ -225,7 +225,7 @@ const SavingsTracker: React.FC<SavingsTrackerProps> = ({ data, setData, currency
                       </div>
                       <button 
                         onClick={() => handleDelete(item.id)}
-                        className="text-slate-200 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all p-2"
+                        className="text-slate-200 hover:text-rose-500 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all p-2"
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>

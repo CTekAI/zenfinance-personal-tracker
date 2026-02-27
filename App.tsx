@@ -149,11 +149,18 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#F9FBFC] flex">
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/30 z-40 md:hidden backdrop-blur-sm"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       <aside className={`
         fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-100 transform transition-transform duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]
         md:relative md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        <div className="h-full flex flex-col p-8">
+        <div className="h-full flex flex-col p-5 sm:p-8">
           <div className="flex items-center justify-between mb-12">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-slate-900 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-slate-200">
@@ -209,7 +216,7 @@ const App: React.FC = () => {
       </aside>
 
       <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-        <header className="bg-transparent px-8 pt-8 pb-4 flex items-center justify-between flex-shrink-0">
+        <header className="bg-transparent px-4 sm:px-6 lg:px-8 pt-4 sm:pt-8 pb-4 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center space-x-4">
             <button 
               onClick={() => setIsSidebarOpen(true)}
@@ -219,11 +226,11 @@ const App: React.FC = () => {
             </button>
             <h2 className="text-2xl font-black text-slate-900 tracking-tighter">{activeTab}</h2>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-4">
              <select
                value={currency}
                onChange={e => handleCurrencyChange(e.target.value as CurrencyCode)}
-               className="px-3 py-2 bg-white border border-slate-100 rounded-xl shadow-sm text-sm font-bold text-slate-700 focus:ring-2 focus:ring-slate-900 outline-none cursor-pointer"
+               className="px-2 sm:px-3 py-2 bg-white border border-slate-100 rounded-xl shadow-sm text-xs sm:text-sm font-bold text-slate-700 focus:ring-2 focus:ring-slate-900 outline-none cursor-pointer"
              >
                {Object.values(CURRENCIES).map(c => (
                  <option key={c.code} value={c.code}>{c.symbol} {c.code}</option>
@@ -232,7 +239,7 @@ const App: React.FC = () => {
              <NotificationPanel />
              <button
                onClick={() => setActiveTab('Profile')}
-               className="w-12 h-12 rounded-2xl bg-white border border-slate-100 shadow-sm flex items-center justify-center p-1 overflow-hidden hover:ring-2 hover:ring-slate-900 transition-all"
+               className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-white border border-slate-100 shadow-sm flex items-center justify-center p-1 overflow-hidden hover:ring-2 hover:ring-slate-900 transition-all"
              >
                 {user?.profileImageUrl ? (
                   <img src={user.profileImageUrl} alt={displayName} className="w-full h-full rounded-xl object-cover" />
@@ -245,7 +252,7 @@ const App: React.FC = () => {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 custom-scrollbar">
           <div className="max-w-6xl mx-auto pb-10">
             {renderActiveTab()}
           </div>

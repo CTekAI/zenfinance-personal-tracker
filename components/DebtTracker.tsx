@@ -163,7 +163,7 @@ const DebtTracker: React.FC<DebtTrackerProps> = ({ data, setData, currency }) =>
         </button>
       </div>
 
-      <div className="bg-slate-900 rounded-[2.5rem] p-10 text-white relative overflow-hidden shadow-2xl shadow-slate-200">
+      <div className="bg-slate-900 rounded-[2.5rem] p-6 sm:p-10 text-white relative overflow-hidden shadow-2xl shadow-slate-200">
         <div className="relative z-10">
           <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">Total Outstanding</p>
           <div className="flex flex-wrap items-baseline gap-3 mb-8">
@@ -171,7 +171,7 @@ const DebtTracker: React.FC<DebtTrackerProps> = ({ data, setData, currency }) =>
               Object.entries(currencyTotals).map(([cur, total], i) => (
                 <React.Fragment key={cur}>
                   {i > 0 && <span className="text-slate-500 text-2xl font-light">|</span>}
-                  <span className="text-4xl sm:text-5xl font-black tracking-tighter">
+                  <span className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tighter">
                     {formatCurrency(total, cur as CurrencyCode)}
                   </span>
                 </React.Fragment>
@@ -181,7 +181,7 @@ const DebtTracker: React.FC<DebtTrackerProps> = ({ data, setData, currency }) =>
             )}
           </div>
           <div className="flex flex-wrap gap-6">
-            <div className="flex items-center space-x-3 bg-white/5 px-4 py-3 rounded-2xl border border-white/10 backdrop-blur-sm">
+            <div className="flex items-center space-x-3 bg-white/5 px-4 py-2 sm:py-3 rounded-2xl border border-white/10 backdrop-blur-sm">
               <Percent className="w-5 h-5 text-indigo-400" />
               <div>
                 <p className="text-[10px] text-slate-400 font-bold uppercase">Avg Rate</p>
@@ -192,7 +192,7 @@ const DebtTracker: React.FC<DebtTrackerProps> = ({ data, setData, currency }) =>
                 </p>
               </div>
             </div>
-            <div className="flex items-center space-x-3 bg-white/5 px-4 py-3 rounded-2xl border border-white/10 backdrop-blur-sm">
+            <div className="flex items-center space-x-3 bg-white/5 px-4 py-2 sm:py-3 rounded-2xl border border-white/10 backdrop-blur-sm">
               <Activity className="w-5 h-5 text-emerald-400" />
               <div>
                 <p className="text-[10px] text-slate-400 font-bold uppercase">Monthly Min</p>
@@ -216,7 +216,7 @@ const DebtTracker: React.FC<DebtTrackerProps> = ({ data, setData, currency }) =>
       </div>
 
       {showAdd && (
-        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-2xl animate-in fade-in slide-in-from-top-4">
+        <div className="bg-white p-5 sm:p-8 rounded-[2.5rem] border border-slate-100 shadow-2xl animate-in fade-in slide-in-from-top-4">
           <h3 className="text-xl font-black text-slate-900 mb-6 tracking-tight">Register Liability</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="space-y-2">

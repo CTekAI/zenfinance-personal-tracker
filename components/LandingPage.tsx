@@ -15,17 +15,17 @@ const LandingPage: React.FC = () => {
             </div>
             <span className="text-lg font-black text-slate-900 tracking-tighter">ZenFinance</span>
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 sm:space-x-3">
             <button
               onClick={() => setAuthModal('signin')}
-              className="flex items-center space-x-2 px-5 py-2.5 border-2 border-slate-900 text-slate-900 rounded-xl font-bold text-sm hover:bg-slate-50 transition-colors"
+              className="flex items-center space-x-1.5 sm:space-x-2 px-3 sm:px-5 py-2 sm:py-2.5 border-2 border-slate-900 text-slate-900 rounded-xl font-bold text-xs sm:text-sm hover:bg-slate-50 transition-colors"
             >
               <LogIn className="w-4 h-4" />
               <span>Sign In</span>
             </button>
             <button
               onClick={() => setAuthModal('signup')}
-              className="flex items-center space-x-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-colors shadow-lg shadow-slate-200"
+              className="flex items-center space-x-1.5 sm:space-x-2 px-3 sm:px-5 py-2 sm:py-2.5 bg-slate-900 text-white rounded-xl font-bold text-xs sm:text-sm hover:bg-slate-800 transition-colors shadow-lg shadow-slate-200"
             >
               <UserPlus className="w-4 h-4" />
               <span>Sign Up</span>
@@ -34,10 +34,10 @@ const LandingPage: React.FC = () => {
         </div>
       </nav>
 
-      <section className="pt-32 pb-20 px-6">
+      <section className="pt-24 sm:pt-32 pb-12 sm:pb-20 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-16 items-center">
           <div>
-            <h1 className="text-5xl lg:text-6xl font-black text-slate-900 tracking-tighter leading-[1.1] mb-6">
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tighter leading-[1.1] mb-6">
               Take control of your{' '}
               <span className="bg-gradient-to-r from-rose-400 to-orange-400 bg-clip-text text-transparent">
                 finances
@@ -91,26 +91,26 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      <section className="py-20 px-6">
+      <section className="py-12 sm:py-20 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl font-black text-slate-900 tracking-tighter text-center mb-4">Everything you need</h2>
           <p className="text-slate-400 text-center mb-16 max-w-md mx-auto">Powerful tools to manage every aspect of your financial life.</p>
           <div className="grid md:grid-cols-3 gap-6">
-            <div className="bg-white rounded-[1.5rem] p-8 border border-slate-100 hover:shadow-xl hover:shadow-slate-100 transition-all duration-300">
+            <div className="bg-white rounded-[1.5rem] p-5 sm:p-8 border border-slate-100 hover:shadow-xl hover:shadow-slate-100 transition-all duration-300">
               <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center mb-5">
                 <PiggyBank className="w-6 h-6 text-emerald-500" />
               </div>
               <h3 className="font-black text-slate-900 text-lg tracking-tight mb-2">Smart Savings</h3>
               <p className="text-slate-400 text-sm leading-relaxed">Set targets, track progress, and watch your savings grow with visual progress bars.</p>
             </div>
-            <div className="bg-white rounded-[1.5rem] p-8 border border-slate-100 hover:shadow-xl hover:shadow-slate-100 transition-all duration-300">
+            <div className="bg-white rounded-[1.5rem] p-5 sm:p-8 border border-slate-100 hover:shadow-xl hover:shadow-slate-100 transition-all duration-300">
               <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center mb-5">
                 <BarChart3 className="w-6 h-6 text-blue-500" />
               </div>
               <h3 className="font-black text-slate-900 text-lg tracking-tight mb-2">Expense Tracking</h3>
               <p className="text-slate-400 text-sm leading-relaxed">Categorize spending, spot patterns, and understand exactly where your money goes.</p>
             </div>
-            <div className="bg-white rounded-[1.5rem] p-8 border border-slate-100 hover:shadow-xl hover:shadow-slate-100 transition-all duration-300">
+            <div className="bg-white rounded-[1.5rem] p-5 sm:p-8 border border-slate-100 hover:shadow-xl hover:shadow-slate-100 transition-all duration-300">
               <div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center mb-5">
                 <TrendingUp className="w-6 h-6 text-purple-500" />
               </div>
