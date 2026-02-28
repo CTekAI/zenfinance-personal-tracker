@@ -3,7 +3,10 @@ import bcrypt from "bcrypt";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { db } from "./db";
+import session from "express-session";
+import connectPg from "connect-pg-simple";
+import passport from "passport";
+import { db, pool } from "./db";
 import { users } from "@shared/models/auth";
 import { eq } from "drizzle-orm";
 
@@ -34,6 +37,36 @@ const upload = multer({
 });
 
 const SALT_ROUNDS = 12;
+
+export function setupLocalAuth(app: Express) {
+  const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
+  const PgStore = connectPg(session);
+  const sessionStore = new PgStore({
+    conString: process.env.DATABASE_URL,
+    createTableIfMissing: false,
+    ttl: sessionTtl / 1000, // connect-pg-simple expects seconds
+    tableName: "sessions",
+  });
+
+  app.use(
+    session({
+      secret: process.env.SESSION_SECRET!,
+      store: sessionStore,
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        maxAge: sessionTtl,
+      },
+    })
+  );
+
+  app.use(passport.initialize());
+  app.use(passport.session());
+  passport.serializeUser((user: any, cb) => cb(null, user));
+  passport.deserializeUser((user: any, cb) => cb(null, user));
+}
 
 export function registerCustomAuthRoutes(app: Express) {
   app.post("/api/auth/register", async (req, res) => {
@@ -332,48 +365,17 @@ export function registerCustomAuthRoutes(app: Express) {
   });
 }
 
-export const isAuthenticatedCustom: RequestHandler = async (req, res, next) => {
+export const isAuthenticatedCustom: RequestHandler = (req, res, next) => {
   const user = req.user as any;
 
   if (!req.isAuthenticated() || !user) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
-  if (user.authType === "email") {
-    const now = Math.floor(Date.now() / 1000);
-    if (user.expires_at && now <= user.expires_at) {
-      return next();
-    }
-    return res.status(401).json({ message: "Session expired" });
-  }
-
-  if (!user.expires_at) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
   const now = Math.floor(Date.now() / 1000);
-  if (now <= user.expires_at) {
+  if (user.expires_at && now <= user.expires_at) {
     return next();
   }
 
-  const refreshToken = user.refresh_token;
-  if (!refreshToken) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
-  try {
-    const client = await import("openid-client");
-    const config = await client.discovery(
-      new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
-      process.env.REPL_ID!
-    );
-    const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
-    user.claims = tokenResponse.claims();
-    user.access_token = tokenResponse.access_token;
-    user.refresh_token = tokenResponse.refresh_token;
-    user.expires_at = user.claims?.exp;
-    return next();
-  } catch (error) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
+  return res.status(401).json({ message: "Session expired" });
 };

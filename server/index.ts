@@ -2,8 +2,7 @@ import "dotenv/config";
 import express from "express";
 import path from "path";
 import fs from "fs";
-import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
-import { registerCustomAuthRoutes } from "./auth";
+import { registerCustomAuthRoutes, setupLocalAuth } from "./auth";
 import { registerRoutes } from "./routes";
 import { registerAIRoutes } from "./ai";
 
@@ -15,8 +14,7 @@ const isProd = process.env.NODE_ENV === "production";
 const port = isProd ? 5000 : 3001;
 
 (async () => {
-  await setupAuth(app);
-  registerAuthRoutes(app);
+  setupLocalAuth(app);
   registerCustomAuthRoutes(app);
   registerRoutes(app);
   registerAIRoutes(app);
