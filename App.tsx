@@ -29,8 +29,8 @@ import Profile from './components/Profile';
 import NotificationPanel from './components/NotificationPanel';
 import LandingPage from './components/LandingPage';
 import { useAuth } from './client/src/hooks/use-auth';
-import { CurrencyCode, CURRENCIES } from './client/src/lib/currency';
-import { updateCurrency } from './client/src/lib/api';
+import { CurrencyCode } from './client/src/lib/currency';
+
 
 const EMPTY_DATA: FinanceData = {
   income: [],
@@ -78,14 +78,6 @@ const App: React.FC = () => {
     }
   }, [user]);
 
-  const handleCurrencyChange = async (newCurrency: CurrencyCode) => {
-    setCurrency(newCurrency);
-    try {
-      await updateCurrency(newCurrency);
-    } catch (error) {
-      console.error('Failed to update currency:', error);
-    }
-  };
 
   if (authLoading) {
     return (
@@ -227,16 +219,7 @@ const App: React.FC = () => {
             <h2 className="text-2xl font-black text-slate-900 tracking-tighter">{activeTab}</h2>
           </div>
           <div className="flex items-center space-x-2 sm:space-x-4">
-             <select
-               value={currency}
-               onChange={e => handleCurrencyChange(e.target.value as CurrencyCode)}
-               className="px-2 sm:px-3 py-2 bg-white border border-slate-100 rounded-xl shadow-sm text-xs sm:text-sm font-bold text-slate-700 focus:ring-2 focus:ring-slate-900 outline-none cursor-pointer"
-             >
-               {Object.values(CURRENCIES).map(c => (
-                 <option key={c.code} value={c.code}>{c.symbol} {c.code}</option>
-               ))}
-             </select>
-             <NotificationPanel />
+<NotificationPanel />
              <button
                onClick={() => setActiveTab('Profile')}
                className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-white border border-slate-100 shadow-sm flex items-center justify-center p-1 overflow-hidden hover:ring-2 hover:ring-slate-900 transition-all"

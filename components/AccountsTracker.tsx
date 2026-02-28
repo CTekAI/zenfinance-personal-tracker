@@ -106,10 +106,6 @@ const AccountsTracker: React.FC<AccountsTrackerProps> = ({ data, setData, curren
     acc[a.currency] = (acc[a.currency] || 0) + a.balance;
     return acc;
   }, {});
-  const hasMixedCurrencies = Object.keys(currencyGroups).length > 1;
-  const totalInSelectedCurrency = accounts
-    .filter(a => a.currency === currency)
-    .reduce((sum, a) => sum + a.balance, 0);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -129,22 +125,24 @@ const AccountsTracker: React.FC<AccountsTrackerProps> = ({ data, setData, curren
 
       <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 rounded-[2.5rem] p-6 sm:p-10 text-white shadow-2xl shadow-indigo-200/50">
         <div className="relative z-10">
-          <p className="text-indigo-200 text-xs font-bold uppercase tracking-widest mb-2">
-            {hasMixedCurrencies ? `Balance (${currency} accounts)` : 'Total Balance'}
+          <p className="text-indigo-200 text-xs font-bold uppercase tracking-widest mb-4">
+            Total Balance
           </p>
-          <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tighter mb-4">
-            {formatCurrency(hasMixedCurrencies ? totalInSelectedCurrency : accounts.reduce((s, a) => s + a.balance, 0), currency)}
-          </h2>
-          {hasMixedCurrencies && (
-            <div className="flex flex-wrap gap-3 mb-4">
-              {Object.entries(currencyGroups).filter(([c]) => c !== currency).map(([c, total]) => (
-                <span key={c} className="text-indigo-200 text-sm font-medium bg-white/10 px-3 py-1 rounded-full">
-                  {formatCurrency(total, c as CurrencyCode)}
-                </span>
+          {Object.keys(currencyGroups).length === 0 ? (
+            <h2 className="text-4xl font-black tracking-tighter text-white/40">No accounts yet</h2>
+          ) : (
+            <div className="flex flex-wrap items-baseline gap-4">
+              {Object.entries(currencyGroups).map(([cur, total], i) => (
+                <React.Fragment key={cur}>
+                  {i > 0 && <span className="text-indigo-400 text-2xl font-light">|</span>}
+                  <h2 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tighter">
+                    {formatCurrency(total as number, cur as CurrencyCode)}
+                  </h2>
+                </React.Fragment>
               ))}
             </div>
           )}
-          <p className="text-indigo-200 text-sm font-medium">{accounts.length} account{accounts.length !== 1 ? 's' : ''} connected</p>
+          <p className="text-indigo-200 text-sm font-medium mt-6">{accounts.length} account{accounts.length !== 1 ? 's' : ''} connected</p>
         </div>
         <div className="absolute -right-16 -top-16 w-80 h-80 bg-white/5 rounded-full blur-3xl"></div>
         <Landmark className="absolute -right-4 -bottom-4 w-48 h-48 text-white/5 rotate-12" />
@@ -277,7 +275,7 @@ const AccountsTracker: React.FC<AccountsTrackerProps> = ({ data, setData, curren
                       <h3 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tighter">
                         {formatCurrency(item.balance, item.currency as CurrencyCode)}
                       </h3>
-                      <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{item.currency}</span>
+                      <span className="text-sm font-black text-indigo-500 uppercase tracking-widest">{item.currency}</span>
                     </div>
 
                     <div className="flex items-center space-x-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all flex-shrink-0">

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid,
 } from 'recharts';
@@ -32,6 +32,8 @@ const getCategoryIcon = (category: string) => {
 const Dashboard: React.FC<DashboardProps> = ({ data, currency }) => {
   const accounts = data.accounts || [];
   const spendingLog = data.spendingLog || [];
+  const [spendingCurTab, setSpendingCurTab] = useState<string>('');
+  const [trendCurTab, setTrendCurTab] = useState<string>('');
 
   const currencyGroups = useMemo(() => {
     const groups: Record<string, number> = {};
@@ -41,47 +43,80 @@ const Dashboard: React.FC<DashboardProps> = ({ data, currency }) => {
     return groups;
   }, [accounts]);
 
-  const totalIncoming = useMemo(() => {
-    return data.income.reduce((sum, item) => sum + item.amount, 0);
-  }, [data.income]);
+  const incomingByCurrency = useMemo(() => {
+    const g: Record<string, number> = {};
+    for (const item of data.income)
+      g[item.currency || currency] = (g[item.currency || currency] || 0) + item.amount;
+    return g;
+  }, [data.income, currency]);
 
-  const totalExpenses = useMemo(() => {
-    return data.outgoings.reduce((sum, item) => sum + item.amount, 0);
-  }, [data.outgoings]);
-
-  const totalDebtPayments = useMemo(() => {
-    return data.debt.reduce((sum, item) => sum + item.minPayment, 0);
-  }, [data.debt]);
-
-  const totalSavingsBalance = useMemo(() => {
-    return data.savings.reduce((sum, item) => sum + item.balance, 0);
-  }, [data.savings]);
-
-  const totalSpending = useMemo(() => {
+  const expensesByCurrency = useMemo(() => {
+    const g: Record<string, number> = {};
+    for (const item of data.outgoings)
+      g[item.currency || currency] = (g[item.currency || currency] || 0) + item.amount;
     const now = new Date();
     const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    return spendingLog
-      .filter(s => s.date.startsWith(thisMonth))
-      .reduce((sum, s) => sum + s.amount, 0);
-  }, [spendingLog]);
-
-  const availableMoney = totalIncoming - totalExpenses - totalDebtPayments;
-  const isPositiveFlow = totalIncoming >= totalExpenses + totalDebtPayments;
-
-  const categorySpending = useMemo(() => {
-    const acc: Record<string, number> = {};
-    for (const item of data.outgoings) {
-      acc[item.category] = (acc[item.category] || 0) + item.amount;
-    }
     for (const item of spendingLog) {
-      const now = new Date();
-      const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      if (item.date.startsWith(thisMonth))
+        g[item.currency || currency] = (g[item.currency || currency] || 0) + item.amount;
+    }
+    return g;
+  }, [data.outgoings, spendingLog, currency]);
+
+  const debtByCurrency = useMemo(() => {
+    const g: Record<string, number> = {};
+    for (const item of data.debt)
+      g[item.currency || currency] = (g[item.currency || currency] || 0) + item.minPayment;
+    return g;
+  }, [data.debt, currency]);
+
+  const savingsByCurrency = useMemo(() => {
+    const g: Record<string, number> = {};
+    for (const item of data.savings)
+      g[item.currency || currency] = (g[item.currency || currency] || 0) + item.balance;
+    return g;
+  }, [data.savings, currency]);
+
+  const availableByCurrency = useMemo(() => {
+    const g: Record<string, number> = {};
+    const allCurs = new Set([
+      ...Object.keys(incomingByCurrency),
+      ...Object.keys(expensesByCurrency),
+      ...Object.keys(debtByCurrency),
+    ]);
+    for (const cur of allCurs)
+      g[cur] = (incomingByCurrency[cur] || 0) - (expensesByCurrency[cur] || 0) - (debtByCurrency[cur] || 0);
+    return g;
+  }, [incomingByCurrency, expensesByCurrency, debtByCurrency]);
+
+  // Scalars for the cash flow banner and pie chart (primary currency only)
+  const totalIncoming = incomingByCurrency[currency] || 0;
+  const totalExpenses = expensesByCurrency[currency] || 0;
+  const availableMoney = availableByCurrency[currency] || 0;
+  const isPositiveFlow = availableMoney >= 0;
+
+  const categorySpendingByCurrency = useMemo(() => {
+    const byCur: Record<string, Record<string, number>> = {};
+    for (const item of data.outgoings) {
+      const cur = item.currency || currency;
+      if (!byCur[cur]) byCur[cur] = {};
+      byCur[cur][item.category] = (byCur[cur][item.category] || 0) + item.amount;
+    }
+    const now = new Date();
+    const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    for (const item of spendingLog) {
       if (item.date.startsWith(thisMonth)) {
-        acc[item.category] = (acc[item.category] || 0) + item.amount;
+        const cur = item.currency || currency;
+        if (!byCur[cur]) byCur[cur] = {};
+        byCur[cur][item.category] = (byCur[cur][item.category] || 0) + item.amount;
       }
     }
-    return Object.entries(acc).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
-  }, [data.outgoings, spendingLog]);
+    const result: Record<string, { name: string; value: number }[]> = {};
+    for (const [cur, cats] of Object.entries(byCur)) {
+      result[cur] = Object.entries(cats).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+    }
+    return result;
+  }, [data.outgoings, spendingLog, currency]);
 
   const upcomingExpenses = useMemo(() => {
     const today = new Date().getDate();
@@ -96,47 +131,63 @@ const Dashboard: React.FC<DashboardProps> = ({ data, currency }) => {
       .slice(0, 6);
   }, [data.outgoings]);
 
-  const trendData = useMemo(() => {
-    const months: Record<string, { income: number; expenses: number }> = {};
+  const trendDataByCurrency = useMemo(() => {
     const now = new Date();
+    const monthKeys: string[] = [];
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const label = d.toLocaleDateString(undefined, { month: 'short' });
-      months[key] = { income: 0, expenses: 0 };
+      monthKeys.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
     }
+    const byCur: Record<string, Record<string, { income: number; expenses: number }>> = {};
+    const ensureCur = (cur: string) => {
+      if (!byCur[cur]) {
+        byCur[cur] = {};
+        for (const key of monthKeys) byCur[cur][key] = { income: 0, expenses: 0 };
+      }
+    };
     for (const item of data.income) {
+      const cur = item.currency || currency;
+      ensureCur(cur);
       if (item.frequency === 'Monthly') {
-        for (const key of Object.keys(months)) {
-          months[key].income += item.amount;
-        }
+        for (const key of monthKeys) byCur[cur][key].income += item.amount;
       }
     }
     for (const item of data.outgoings) {
+      const cur = item.currency || currency;
+      ensureCur(cur);
       if (item.isRecurring || item.frequency === 'Monthly') {
-        for (const key of Object.keys(months)) {
-          months[key].expenses += item.amount;
-        }
+        for (const key of monthKeys) byCur[cur][key].expenses += item.amount;
       } else if (item.date) {
-        const monthKey = item.date.substring(0, 7);
-        if (months[monthKey]) {
-          months[monthKey].expenses += item.amount;
-        }
+        const mk = item.date.substring(0, 7);
+        if (byCur[cur][mk] !== undefined) byCur[cur][mk].expenses += item.amount;
       }
     }
-    return Object.entries(months).map(([key, val]) => {
-      const d = new Date(key + '-01');
-      return {
-        month: d.toLocaleDateString(undefined, { month: 'short' }),
-        income: val.income,
-        expenses: val.expenses,
-      };
-    });
-  }, [data.income, data.outgoings]);
+    const result: Record<string, { month: string; income: number; expenses: number }[]> = {};
+    for (const [cur, months] of Object.entries(byCur)) {
+      result[cur] = monthKeys.map(key => {
+        const d = new Date(key + '-01');
+        return {
+          month: d.toLocaleDateString(undefined, { month: 'short' }),
+          income: months[key]?.income || 0,
+          expenses: months[key]?.expenses || 0,
+        };
+      });
+    }
+    return result;
+  }, [data.income, data.outgoings, currency]);
 
   const fc = (amount: number) => formatCurrency(amount, currency);
 
   const COLORS = Object.values(CATEGORY_COLORS);
+
+  const spendingCurrencies = Object.keys(categorySpendingByCurrency);
+  const activeSCur = (spendingCurrencies.includes(spendingCurTab) ? spendingCurTab : spendingCurrencies[0]) || currency;
+  const activeSpending = categorySpendingByCurrency[activeSCur] || [];
+  const activeSpendingTotal = activeSpending.reduce((s, c) => s + c.value, 0);
+
+  const trendCurrencies = Object.keys(trendDataByCurrency);
+  const activeTCur = (trendCurrencies.includes(trendCurTab) ? trendCurTab : trendCurrencies[0]) || currency;
+  const activeTrendData = trendDataByCurrency[activeTCur] || [];
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
@@ -148,8 +199,15 @@ const Dashboard: React.FC<DashboardProps> = ({ data, currency }) => {
             </div>
             <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">In</span>
           </div>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Incoming</p>
-          <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tighter">{fc(totalIncoming)}</h3>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Incoming</p>
+          <div className="space-y-1">
+            {Object.entries(incomingByCurrency).length > 0 ? Object.entries(incomingByCurrency).map(([cur, amt]) => (
+              <div key={cur} className="flex items-baseline justify-between gap-2">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest shrink-0">{cur}</span>
+                <span className="text-lg sm:text-xl font-black text-slate-900 tracking-tighter truncate">{formatCurrency(amt, cur as CurrencyCode)}</span>
+              </div>
+            )) : <span className="text-xl font-black text-slate-300 tracking-tighter">—</span>}
+          </div>
         </div>
 
         <div className="bg-white p-4 sm:p-6 rounded-[2rem] border border-slate-100 shadow-sm">
@@ -159,8 +217,15 @@ const Dashboard: React.FC<DashboardProps> = ({ data, currency }) => {
             </div>
             <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest">Out</span>
           </div>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Outgoing</p>
-          <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tighter">{fc(totalExpenses + totalSpending)}</h3>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Outgoing</p>
+          <div className="space-y-1">
+            {Object.entries(expensesByCurrency).length > 0 ? Object.entries(expensesByCurrency).map(([cur, amt]) => (
+              <div key={cur} className="flex items-baseline justify-between gap-2">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest shrink-0">{cur}</span>
+                <span className="text-lg sm:text-xl font-black text-slate-900 tracking-tighter truncate">{formatCurrency(amt, cur as CurrencyCode)}</span>
+              </div>
+            )) : <span className="text-xl font-black text-slate-300 tracking-tighter">—</span>}
+          </div>
         </div>
 
         <div className="bg-white p-4 sm:p-6 rounded-[2rem] border border-slate-100 shadow-sm">
@@ -170,8 +235,15 @@ const Dashboard: React.FC<DashboardProps> = ({ data, currency }) => {
             </div>
             <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Saved</span>
           </div>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Savings</p>
-          <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tighter">{fc(totalSavingsBalance)}</h3>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Savings</p>
+          <div className="space-y-1">
+            {Object.entries(savingsByCurrency).length > 0 ? Object.entries(savingsByCurrency).map(([cur, amt]) => (
+              <div key={cur} className="flex items-baseline justify-between gap-2">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest shrink-0">{cur}</span>
+                <span className="text-lg sm:text-xl font-black text-indigo-700 tracking-tighter truncate">{formatCurrency(amt, cur as CurrencyCode)}</span>
+              </div>
+            )) : <span className="text-xl font-black text-slate-300 tracking-tighter">—</span>}
+          </div>
         </div>
 
         <div className={`p-4 sm:p-6 rounded-[2rem] border shadow-sm ${isPositiveFlow ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
@@ -183,10 +255,17 @@ const Dashboard: React.FC<DashboardProps> = ({ data, currency }) => {
               {isPositiveFlow ? 'Surplus' : 'Deficit'}
             </span>
           </div>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Available</p>
-          <h3 className={`text-xl sm:text-2xl font-black tracking-tighter ${isPositiveFlow ? 'text-emerald-700' : 'text-rose-700'}`}>
-            {fc(Math.abs(availableMoney))}
-          </h3>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Available</p>
+          <div className="space-y-1">
+            {Object.entries(availableByCurrency).length > 0 ? Object.entries(availableByCurrency).map(([cur, amt]) => (
+              <div key={cur} className="flex items-baseline justify-between gap-2">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest shrink-0">{cur}</span>
+                <span className={`text-lg sm:text-xl font-black tracking-tighter truncate ${amt >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                  {amt < 0 ? '-' : ''}{formatCurrency(Math.abs(amt), cur as CurrencyCode)}
+                </span>
+              </div>
+            )) : <span className="text-xl font-black text-slate-300 tracking-tighter">—</span>}
+          </div>
         </div>
       </div>
 
@@ -218,12 +297,12 @@ const Dashboard: React.FC<DashboardProps> = ({ data, currency }) => {
               {isPositiveFlow ? 'More coming in than going out' : 'Spending exceeds income'}
             </p>
             <p className="text-sm text-slate-500">
-              {fc(totalIncoming)} in — {fc(totalExpenses + totalSpending)} out this month
+              {fc(totalIncoming)} in — {fc(totalExpenses)} out this month
             </p>
           </div>
         </div>
         <div className={`px-4 py-2 rounded-full font-black text-sm ${isPositiveFlow ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-          {isPositiveFlow ? '+' : '-'}{fc(Math.abs(totalIncoming - totalExpenses - totalSpending))}
+          {isPositiveFlow ? '+' : '-'}{fc(Math.abs(availableMoney))}
         </div>
       </div>
 
@@ -231,16 +310,28 @@ const Dashboard: React.FC<DashboardProps> = ({ data, currency }) => {
         <div className="bg-white p-5 sm:p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative">
           <div className="flex justify-between items-center mb-6">
             <h3 className="font-black text-slate-900 text-xl tracking-tight">Spending Breakdown</h3>
-            <span className="text-xs font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">This Month</span>
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              {spendingCurrencies.length > 1 && (
+                <div className="flex gap-1">
+                  {spendingCurrencies.map(cur => (
+                    <button key={cur} onClick={() => setSpendingCurTab(cur)}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${activeSCur === cur ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-400 hover:text-slate-700 border border-slate-100'}`}>
+                      {cur}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <span className="text-xs font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">This Month</span>
+            </div>
           </div>
-          
-          {categorySpending.length > 0 ? (
+
+          {activeSpending.length > 0 ? (
             <>
               <div className="h-[200px] sm:h-[280px] relative">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={categorySpending}
+                      data={activeSpending}
                       cx="50%"
                       cy="50%"
                       innerRadius={60}
@@ -249,31 +340,31 @@ const Dashboard: React.FC<DashboardProps> = ({ data, currency }) => {
                       dataKey="value"
                       stroke="none"
                     >
-                      {categorySpending.map((entry, index) => (
+                      {activeSpending.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[entry.name] || COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip 
+                    <Tooltip
                       contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', fontSize: '13px', fontWeight: 600 }}
-                      formatter={(value: number) => fc(value)}
+                      formatter={(value: number) => formatCurrency(value, activeSCur as CurrencyCode)}
                     />
                   </PieChart>
                 </ResponsiveContainer>
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <p className="text-lg sm:text-2xl font-black text-slate-900 tracking-tighter">{fc(totalExpenses + totalSpending)}</p>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Total</p>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none px-6">
+                  <p className="text-sm sm:text-base font-black text-slate-900 tracking-tighter text-center leading-tight">{formatCurrency(activeSpendingTotal, activeSCur as CurrencyCode)}</p>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Total</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3 mt-6">
-                {categorySpending.slice(0, 6).map((cat, i) => (
-                  <div key={i} className="flex items-center space-x-3 p-3 rounded-xl bg-slate-50/50">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white" style={{ backgroundColor: CATEGORY_COLORS[cat.name] || COLORS[i % COLORS.length] }}>
+                {activeSpending.slice(0, 6).map((cat, i) => (
+                  <div key={i} className="flex items-center space-x-2 p-3 rounded-xl bg-slate-50/50 overflow-hidden">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0" style={{ backgroundColor: CATEGORY_COLORS[cat.name] || COLORS[i % COLORS.length] }}>
                       {getCategoryIcon(cat.name)}
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase leading-none mb-0.5">{cat.name}</p>
-                      <p className="font-bold text-slate-900 text-sm truncate">{fc(cat.value)}</p>
+                    <div className="min-w-0 overflow-hidden">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase leading-none mb-0.5 truncate">{cat.name}</p>
+                      <p className="font-bold text-slate-900 text-xs truncate">{formatCurrency(cat.value, activeSCur as CurrencyCode)}</p>
                     </div>
                   </div>
                 ))}
@@ -331,18 +422,30 @@ const Dashboard: React.FC<DashboardProps> = ({ data, currency }) => {
       <div className="bg-white p-5 sm:p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
         <div className="flex justify-between items-center mb-6">
           <h3 className="font-black text-slate-900 text-xl tracking-tight">Income vs Expenses</h3>
-          <span className="text-xs font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">Last 6 Months</span>
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            {trendCurrencies.length > 1 && (
+              <div className="flex gap-1">
+                {trendCurrencies.map(cur => (
+                  <button key={cur} onClick={() => setTrendCurTab(cur)}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${activeTCur === cur ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-400 hover:text-slate-700 border border-slate-100'}`}>
+                    {cur}
+                  </button>
+                ))}
+              </div>
+            )}
+            <span className="text-xs font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">Last 6 Months</span>
+          </div>
         </div>
-        {trendData.length > 0 && (trendData.some(d => d.income > 0 || d.expenses > 0)) ? (
+        {activeTrendData.some(d => d.income > 0 || d.expenses > 0) ? (
           <div className="h-[200px] sm:h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trendData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+              <LineChart data={activeTrendData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
                 <XAxis dataKey="month" tick={{ fontSize: 12, fontWeight: 600, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 12, fontWeight: 600, fill: '#94A3B8' }} axisLine={false} tickLine={false} tickFormatter={(v) => fc(v)} width={60} />
-                <Tooltip 
+                <YAxis tick={{ fontSize: 12, fontWeight: 600, fill: '#94A3B8' }} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrency(v, activeTCur as CurrencyCode)} width={60} />
+                <Tooltip
                   contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', fontSize: '13px', fontWeight: 600 }}
-                  formatter={(value: number, name: string) => [fc(value), name === 'income' ? 'Income' : 'Expenses']}
+                  formatter={(value: number, name: string) => [formatCurrency(value, activeTCur as CurrencyCode), name === 'income' ? 'Income' : 'Expenses']}
                 />
                 <Line type="monotone" dataKey="income" stroke="#10B981" strokeWidth={3} dot={{ r: 5, fill: '#10B981' }} activeDot={{ r: 7 }} />
                 <Line type="monotone" dataKey="expenses" stroke="#F43F5E" strokeWidth={3} dot={{ r: 5, fill: '#F43F5E' }} activeDot={{ r: 7 }} />

@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Trash2, ShoppingBag, Filter, X, Home, UtensilsCrossed, Car, Zap, Film, HeartPulse, MoreHorizontal, Calendar } from 'lucide-react';
+import { Plus, Trash2, Pencil, Check, ShoppingBag, Filter, X, Home, UtensilsCrossed, Car, Zap, Film, HeartPulse, MoreHorizontal, Calendar } from 'lucide-react';
 import { FinanceData, FrequencyType } from '../types';
 import { CATEGORIES, CATEGORY_COLORS, DAY_OF_MONTH_OPTIONS } from '../constants';
-import { addOutgoing, deleteOutgoing } from '../client/src/lib/api';
+import { addOutgoing, deleteOutgoing, updateOutgoing } from '../client/src/lib/api';
 import { formatCurrency, CurrencyCode, CURRENCIES } from '../client/src/lib/currency';
 
 const LUCIDE_ICONS: Record<string, React.FC<{ className?: string }>> = {
@@ -44,6 +44,17 @@ interface OutgoingsTrackerProps {
 
 const OutgoingsTracker: React.FC<OutgoingsTrackerProps> = ({ data, setData, currency }) => {
   const [showAdd, setShowAdd] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editItem, setEditItem] = useState({
+    description: '',
+    amount: '',
+    category: CATEGORIES.OUTGOINGS[0],
+    date: '',
+    frequency: 'Monthly' as FrequencyType,
+    currency: currency as string,
+    isRecurring: true,
+    dayOfMonth: null as number | null,
+  });
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [dateFrom, setDateFrom] = useState('');
@@ -90,6 +101,41 @@ const OutgoingsTracker: React.FC<OutgoingsTrackerProps> = ({ data, setData, curr
       });
     } catch (error) {
       console.error('Failed to add outgoing:', error);
+    }
+  };
+
+  const startEdit = (item: any) => {
+    setEditingId(item.id);
+    setEditItem({
+      description: item.description,
+      amount: String(item.amount),
+      category: item.category,
+      date: item.date,
+      frequency: item.frequency as FrequencyType,
+      currency: item.currency,
+      isRecurring: item.isRecurring,
+      dayOfMonth: item.dayOfMonth ?? null,
+    });
+  };
+
+  const handleEdit = async (id: string) => {
+    const cleanAmount = parseFloat(editItem.amount.replace(/[^0-9.]/g, ''));
+    if (isNaN(cleanAmount)) return;
+    try {
+      const updated = await updateOutgoing(id, {
+        description: editItem.description,
+        amount: cleanAmount,
+        category: editItem.category,
+        date: editItem.date,
+        frequency: editItem.isRecurring ? editItem.frequency : 'One-time',
+        currency: editItem.currency,
+        isRecurring: editItem.isRecurring,
+        dayOfMonth: editItem.isRecurring ? editItem.dayOfMonth : null,
+      });
+      setData(prev => ({ ...prev, outgoings: prev.outgoings.map(o => o.id === id ? updated : o) }));
+      setEditingId(null);
+    } catch (error) {
+      console.error('Failed to update outgoing:', error);
     }
   };
 
@@ -339,55 +385,155 @@ const OutgoingsTracker: React.FC<OutgoingsTrackerProps> = ({ data, setData, curr
               const color = getCategoryColor(item.category);
               const itemCurrency = (item.currency || currency) as CurrencyCode;
               return (
-                <div 
-                  key={item.id} 
-                  className={`flex items-center justify-between p-3 sm:p-5 hover:bg-slate-50 rounded-[1.5rem] transition-all group ${idx !== filteredOutgoings.length - 1 ? 'border-b border-slate-50' : ''}`}
+                <div
+                  key={item.id}
+                  className={`rounded-[1.5rem] transition-all group ${editingId !== item.id ? 'hover:bg-slate-50' : ''} ${idx !== filteredOutgoings.length - 1 ? 'border-b border-slate-50' : ''}`}
                 >
-                  <div className="flex items-center space-x-5">
-                    <div
-                      className="w-10 h-10 sm:w-14 sm:h-14 rounded-full flex items-center justify-center group-hover:shadow-sm transition-all"
-                      style={{ backgroundColor: color + '15', border: `2px solid ${color}30` }}
-                    >
-                      <Icon className="w-5 h-5 sm:w-6 sm:h-6" style={{ color }} />
-                    </div>
-                    <div>
-                      <h4 className="font-black text-slate-900 text-base leading-none mb-1.5 tracking-tight min-w-0 truncate">{item.description}</h4>
-                      <div className="flex items-center space-x-2">
-                        <span
-                          className="inline-flex items-center space-x-1 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full"
-                          style={{ backgroundColor: color + '15', color }}
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }}></span>
-                          <span>{item.category}</span>
-                        </span>
-                        <span className="w-1 h-1 rounded-full bg-slate-200"></span>
-                        <span className="hidden sm:inline-flex text-[10px] font-bold text-slate-400">{item.date}</span>
-                        {item.dayOfMonth && (
-                          <>
-                            <span className="w-1 h-1 rounded-full bg-slate-200"></span>
-                            <span className="hidden sm:inline-flex text-[10px] font-bold text-slate-400 items-center space-x-0.5">
-                              <Calendar className="w-3 h-3" />
-                              <span>{item.dayOfMonth}{item.dayOfMonth === 1 ? 'st' : item.dayOfMonth === 2 ? 'nd' : item.dayOfMonth === 3 ? 'rd' : 'th'}</span>
-                            </span>
-                          </>
+                  {editingId === item.id ? (
+                    <div className="p-4 sm:p-6 bg-slate-50 rounded-[1.5rem]">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Merchant / Desc</label>
+                          <input
+                            type="text"
+                            value={editItem.description}
+                            onChange={e => setEditItem({ ...editItem, description: e.target.value })}
+                            className="w-full p-3 rounded-xl bg-white border border-slate-100 focus:ring-2 focus:ring-[#FF4B8B] outline-none font-semibold text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Amount</label>
+                          <input
+                            type="text"
+                            value={editItem.amount}
+                            onChange={e => setEditItem({ ...editItem, amount: e.target.value })}
+                            className="w-full p-3 rounded-xl bg-white border border-slate-100 focus:ring-2 focus:ring-[#FF4B8B] outline-none font-mono font-bold text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Currency</label>
+                          <select
+                            value={editItem.currency}
+                            onChange={e => setEditItem({ ...editItem, currency: e.target.value })}
+                            className="w-full p-3 rounded-xl bg-white border border-slate-100 focus:ring-2 focus:ring-[#FF4B8B] outline-none font-semibold text-sm"
+                          >
+                            {currencyKeys.map(code => (
+                              <option key={code} value={code}>{code} ({CURRENCIES[code].symbol})</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Category</label>
+                          <select
+                            value={editItem.category}
+                            onChange={e => setEditItem({ ...editItem, category: e.target.value })}
+                            className="w-full p-3 rounded-xl bg-white border border-slate-100 focus:ring-2 focus:ring-[#FF4B8B] outline-none font-semibold text-sm"
+                          >
+                            {CATEGORIES.OUTGOINGS.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Type</label>
+                          <select
+                            value={editItem.isRecurring ? 'monthly' : 'one-off'}
+                            onChange={e => setEditItem({ ...editItem, isRecurring: e.target.value === 'monthly' })}
+                            className="w-full p-3 rounded-xl bg-white border border-slate-100 focus:ring-2 focus:ring-[#FF4B8B] outline-none font-semibold text-sm"
+                          >
+                            <option value="monthly">Monthly (Recurring)</option>
+                            <option value="one-off">One-off</option>
+                          </select>
+                        </div>
+                        {editItem.isRecurring ? (
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Day of Month</label>
+                            <select
+                              value={editItem.dayOfMonth ?? ''}
+                              onChange={e => setEditItem({ ...editItem, dayOfMonth: e.target.value ? parseInt(e.target.value) : null })}
+                              className="w-full p-3 rounded-xl bg-white border border-slate-100 focus:ring-2 focus:ring-[#FF4B8B] outline-none font-semibold text-sm"
+                            >
+                              <option value="">Not set</option>
+                              {DAY_OF_MONTH_OPTIONS.map(day => (
+                                <option key={day} value={day}>{day}{day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th'}</option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : (
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Date</label>
+                            <input
+                              type="date"
+                              value={editItem.date}
+                              onChange={e => setEditItem({ ...editItem, date: e.target.value })}
+                              className="w-full p-3 rounded-xl bg-white border border-slate-100 focus:ring-2 focus:ring-[#FF4B8B] outline-none font-semibold text-sm"
+                            />
+                          </div>
                         )}
                       </div>
+                      <div className="flex justify-end space-x-3 mt-4">
+                        <button onClick={() => setEditingId(null)} className="px-4 py-2 text-slate-400 font-bold hover:text-slate-900 transition-colors text-sm">Cancel</button>
+                        <button onClick={() => handleEdit(item.id)} className="bg-[#FF4B8B] text-white px-6 py-2 rounded-xl font-bold text-sm flex items-center gap-2 active:scale-95 transition-all">
+                          <Check className="w-4 h-4" />
+                          Save
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="text-right">
-                      <p className="font-black text-slate-900 text-lg tracking-tighter">-{formatCurrency(item.amount, itemCurrency)}</p>
-                      <p className="text-[9px] font-black uppercase tracking-widest" style={{ color }}>
-                        {item.isRecurring ? item.frequency : 'One-off'}
-                      </p>
+                  ) : (
+                    <div className="flex items-center justify-between p-3 sm:p-5">
+                      <div className="flex items-center space-x-5">
+                        <div
+                          className="w-10 h-10 sm:w-14 sm:h-14 rounded-full flex items-center justify-center group-hover:shadow-sm transition-all"
+                          style={{ backgroundColor: color + '15', border: `2px solid ${color}30` }}
+                        >
+                          <Icon className="w-5 h-5 sm:w-6 sm:h-6" style={{ color }} />
+                        </div>
+                        <div>
+                          <h4 className="font-black text-slate-900 text-base leading-none mb-1.5 tracking-tight min-w-0 truncate">{item.description}</h4>
+                          <div className="flex items-center space-x-2">
+                            <span
+                              className="inline-flex items-center space-x-1 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full"
+                              style={{ backgroundColor: color + '15', color }}
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }}></span>
+                              <span>{item.category}</span>
+                            </span>
+                            <span className="w-1 h-1 rounded-full bg-slate-200"></span>
+                            <span className="hidden sm:inline-flex text-[10px] font-bold text-slate-400">{item.date}</span>
+                            {item.dayOfMonth && (
+                              <>
+                                <span className="w-1 h-1 rounded-full bg-slate-200"></span>
+                                <span className="hidden sm:inline-flex text-[10px] font-bold text-slate-400 items-center space-x-0.5">
+                                  <Calendar className="w-3 h-3" />
+                                  <span>{item.dayOfMonth}{item.dayOfMonth === 1 ? 'st' : item.dayOfMonth === 2 ? 'nd' : item.dayOfMonth === 3 ? 'rd' : 'th'}</span>
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-4">
+                        <div className="text-right">
+                          <p className="font-black text-slate-900 text-lg tracking-tighter">-{formatCurrency(item.amount, itemCurrency)}</p>
+                          <p className="text-[9px] font-black uppercase tracking-widest" style={{ color }}>
+                            {item.isRecurring ? item.frequency : 'One-off'}
+                          </p>
+                        </div>
+                        <div className="flex items-center space-x-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all">
+                          <button
+                            onClick={() => startEdit(item)}
+                            className="p-2 text-slate-200 hover:text-[#FF4B8B] transition-all"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => removeOutgoing(item.id)}
+                            className="p-2 text-slate-200 hover:text-rose-500 transition-all"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <button 
-                      onClick={() => removeOutgoing(item.id)}
-                      className="p-2 text-slate-200 hover:text-rose-500 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+                  )}
                 </div>
               );
             })
