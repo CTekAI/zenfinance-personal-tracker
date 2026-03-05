@@ -16,9 +16,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import session from "express-session";
-import connectPg from "connect-pg-simple";
 import passport from "passport";
-import { Pool as PgPool } from "pg";
 
 // server/db.ts
 import { Pool, neonConfig } from "@neondatabase/serverless";
@@ -188,17 +186,50 @@ var upload = multer({
   }
 });
 var SALT_ROUNDS = 12;
+var DrizzleSessionStore = class extends session.Store {
+  constructor(ttlMs) {
+    super();
+    this.ttl = ttlMs;
+  }
+  async get(sid, cb) {
+    try {
+      const [row] = await db.select().from(sessions).where(eq(sessions.sid, sid));
+      if (!row || row.expire < /* @__PURE__ */ new Date()) return cb(null, null);
+      cb(null, row.sess);
+    } catch (e) {
+      cb(e);
+    }
+  }
+  async set(sid, sess, cb) {
+    try {
+      const expire = new Date(Date.now() + this.ttl);
+      await db.insert(sessions).values({ sid, sess, expire }).onConflictDoUpdate({ target: sessions.sid, set: { sess, expire } });
+      cb(null);
+    } catch (e) {
+      cb(e);
+    }
+  }
+  async destroy(sid, cb) {
+    try {
+      await db.delete(sessions).where(eq(sessions.sid, sid));
+      cb(null);
+    } catch (e) {
+      cb(e);
+    }
+  }
+  async touch(sid, sess, cb) {
+    try {
+      const expire = new Date(Date.now() + this.ttl);
+      await db.update(sessions).set({ expire }).where(eq(sessions.sid, sid));
+      cb(null);
+    } catch (e) {
+      cb(e);
+    }
+  }
+};
 function setupLocalAuth(app2) {
   const sessionTtl = 7 * 24 * 60 * 60 * 1e3;
-  const PgStore = connectPg(session);
-  const pgPool = new PgPool({ connectionString: process.env.DATABASE_URL });
-  const sessionStore = new PgStore({
-    pool: pgPool,
-    createTableIfMissing: true,
-    ttl: sessionTtl / 1e3,
-    // connect-pg-simple expects seconds
-    tableName: "sessions"
-  });
+  const sessionStore = new DrizzleSessionStore(sessionTtl);
   app2.use(
     session({
       secret: process.env.SESSION_SECRET,
@@ -208,6 +239,7 @@ function setupLocalAuth(app2) {
       cookie: {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
         maxAge: sessionTtl
       }
     })

@@ -4,11 +4,9 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import session from "express-session";
-import connectPg from "connect-pg-simple";
 import passport from "passport";
-import { Pool as PgPool } from "pg";
 import { db } from "./db";
-import { users } from "@shared/models/auth";
+import { users, sessions } from "@shared/models/auth";
 import { eq } from "drizzle-orm";
 
 const uploadsDir = process.env.VERCEL === "1"
@@ -41,16 +39,45 @@ const upload = multer({
 
 const SALT_ROUNDS = 12;
 
+class DrizzleSessionStore extends session.Store {
+  private ttl: number;
+  constructor(ttlMs: number) {
+    super();
+    this.ttl = ttlMs;
+  }
+  async get(sid: string, cb: Function) {
+    try {
+      const [row] = await db.select().from(sessions).where(eq(sessions.sid, sid));
+      if (!row || row.expire < new Date()) return cb(null, null);
+      cb(null, row.sess);
+    } catch (e) { cb(e); }
+  }
+  async set(sid: string, sess: any, cb: Function) {
+    try {
+      const expire = new Date(Date.now() + this.ttl);
+      await db.insert(sessions).values({ sid, sess, expire })
+        .onConflictDoUpdate({ target: sessions.sid, set: { sess, expire } });
+      cb(null);
+    } catch (e) { cb(e); }
+  }
+  async destroy(sid: string, cb: Function) {
+    try {
+      await db.delete(sessions).where(eq(sessions.sid, sid));
+      cb(null);
+    } catch (e) { cb(e); }
+  }
+  async touch(sid: string, sess: any, cb: Function) {
+    try {
+      const expire = new Date(Date.now() + this.ttl);
+      await db.update(sessions).set({ expire }).where(eq(sessions.sid, sid));
+      cb(null);
+    } catch (e) { cb(e); }
+  }
+}
+
 export function setupLocalAuth(app: Express) {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
-  const PgStore = connectPg(session);
-  const pgPool = new PgPool({ connectionString: process.env.DATABASE_URL });
-  const sessionStore = new PgStore({
-    pool: pgPool,
-    createTableIfMissing: true,
-    ttl: sessionTtl / 1000, // connect-pg-simple expects seconds
-    tableName: "sessions",
-  });
+  const sessionStore = new DrizzleSessionStore(sessionTtl);
 
   app.use(
     session({
@@ -61,6 +88,7 @@ export function setupLocalAuth(app: Express) {
       cookie: {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
         maxAge: sessionTtl,
       },
     })
