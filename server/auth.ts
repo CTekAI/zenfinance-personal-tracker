@@ -6,7 +6,8 @@ import fs from "fs";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import passport from "passport";
-import { db, pool } from "./db";
+import { Pool as PgPool } from "pg";
+import { db } from "./db";
 import { users } from "@shared/models/auth";
 import { eq } from "drizzle-orm";
 
@@ -43,8 +44,9 @@ const SALT_ROUNDS = 12;
 export function setupLocalAuth(app: Express) {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
   const PgStore = connectPg(session);
+  const pgPool = new PgPool({ connectionString: process.env.DATABASE_URL });
   const sessionStore = new PgStore({
-    pool: pool as any,
+    pool: pgPool,
     createTableIfMissing: true,
     ttl: sessionTtl / 1000, // connect-pg-simple expects seconds
     tableName: "sessions",
