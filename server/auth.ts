@@ -44,7 +44,7 @@ export function setupLocalAuth(app: Express) {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
   const PgStore = connectPg(session);
   const sessionStore = new PgStore({
-    conString: process.env.DATABASE_URL,
+    pool: pool as any,
     createTableIfMissing: true,
     ttl: sessionTtl / 1000, // connect-pg-simple expects seconds
     tableName: "sessions",
