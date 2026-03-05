@@ -126,9 +126,10 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
     formData.append('photo', file);
 
     try {
+      const token = localStorage.getItem('auth_token');
       const res = await fetch('/api/auth/profile-photo', {
         method: 'POST',
-        credentials: 'include',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData,
       });
 
