@@ -138,11 +138,11 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
         setPhotoError(data.message || 'Failed to upload photo');
         setLocalPreviewUrl(null);
       } else {
+        URL.revokeObjectURL(previewUrl);
+        setLocalPreviewUrl(data.profileImageUrl);
         queryClient.setQueryData(['/api/auth/user'], (old: any) =>
           old ? { ...old, profileImageUrl: data.profileImageUrl } : old
         );
-        URL.revokeObjectURL(previewUrl);
-        setLocalPreviewUrl(null);
       }
     } catch {
       setPhotoError('Network error. Please try again.');
