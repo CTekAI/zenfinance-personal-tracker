@@ -1,9 +1,13 @@
 import type { FinanceData, IncomeItem, OutgoingItem, SavingsItem, DebtItem, WishlistItem, AccountItem, SpendingLogItem, NotificationItem } from '../../../types';
 
+function authHeaders(): Record<string, string> {
+  const token = localStorage.getItem('auth_token');
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
+
 async function apiCall<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, {
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     ...options,
   });
   if (res.status === 401) {

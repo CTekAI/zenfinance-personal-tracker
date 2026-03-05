@@ -15,9 +15,7 @@ import bcrypt from "bcrypt";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import session from "express-session";
-import passport from "passport";
-import { neon } from "@neondatabase/serverless";
+import jwt from "jsonwebtoken";
 
 // server/db.ts
 import { Pool, neonConfig } from "@neondatabase/serverless";
@@ -187,81 +185,30 @@ var upload = multer({
   }
 });
 var SALT_ROUNDS = 12;
-var NeonSessionStore = class extends session.Store {
-  constructor(ttlMs) {
-    super();
-    this.ttl = ttlMs;
-    this.sql = neon(process.env.DATABASE_URL);
+var JWT_EXPIRY = "7d";
+function getJwtSecret() {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) throw new Error("SESSION_SECRET must be set");
+  return secret;
+}
+function signToken(userId, email) {
+  return jwt.sign({ sub: userId, email }, getJwtSecret(), { expiresIn: JWT_EXPIRY });
+}
+var isAuthenticatedCustom = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Unauthorized" });
   }
-  async get(sid, cb) {
-    try {
-      const rows = await this.sql`SELECT sess, expire FROM sessions WHERE sid = ${sid}`;
-      if (!rows.length) return cb(null, null);
-      const row = rows[0];
-      if (new Date(row.expire) < /* @__PURE__ */ new Date()) return cb(null, null);
-      cb(null, row.sess);
-    } catch (e) {
-      console.error("[session.get]", e);
-      cb(e);
-    }
-  }
-  async set(sid, sess, cb) {
-    try {
-      const expire = new Date(Date.now() + this.ttl).toISOString();
-      const sessJson = JSON.stringify(sess);
-      await this.sql`
-        INSERT INTO sessions (sid, sess, expire)
-        VALUES (${sid}, ${sessJson}::jsonb, ${expire}::timestamptz)
-        ON CONFLICT (sid) DO UPDATE
-        SET sess = EXCLUDED.sess, expire = EXCLUDED.expire
-      `;
-      cb(null);
-    } catch (e) {
-      console.error("[session.set]", e);
-      cb(e);
-    }
-  }
-  async destroy(sid, cb) {
-    try {
-      await this.sql`DELETE FROM sessions WHERE sid = ${sid}`;
-      cb(null);
-    } catch (e) {
-      console.error("[session.destroy]", e);
-      cb(e);
-    }
-  }
-  async touch(sid, sess, cb) {
-    try {
-      const expire = new Date(Date.now() + this.ttl).toISOString();
-      await this.sql`UPDATE sessions SET expire = ${expire}::timestamptz WHERE sid = ${sid}`;
-      cb(null);
-    } catch (e) {
-      console.error("[session.touch]", e);
-      cb(e);
-    }
+  const token = authHeader.slice(7);
+  try {
+    const payload = jwt.verify(token, getJwtSecret());
+    req.user = { claims: { sub: payload.sub, email: payload.email } };
+    return next();
+  } catch {
+    return res.status(401).json({ message: "Unauthorized" });
   }
 };
-function setupLocalAuth(app2) {
-  const sessionTtl = 7 * 24 * 60 * 60 * 1e3;
-  const sessionStore = new NeonSessionStore(sessionTtl);
-  app2.use(
-    session({
-      secret: process.env.SESSION_SECRET,
-      store: sessionStore,
-      resave: false,
-      saveUninitialized: false,
-      cookie: {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: sessionTtl
-      }
-    })
-  );
-  app2.use(passport.initialize());
-  app2.use(passport.session());
-  passport.serializeUser((user, cb) => cb(null, user));
-  passport.deserializeUser((user, cb) => cb(null, user));
+function setupLocalAuth(_app) {
 }
 function registerCustomAuthRoutes(app2) {
   app2.post("/api/auth/register", async (req, res) => {
@@ -286,28 +233,19 @@ function registerCustomAuthRoutes(app2) {
         email: email.toLowerCase(),
         password: hashedPassword
       }).returning();
-      req.login(
-        {
-          claims: { sub: newUser.id, email: newUser.email },
-          expires_at: Math.floor(Date.now() / 1e3) + 7 * 24 * 60 * 60,
-          authType: "email"
-        },
-        (err) => {
-          if (err) {
-            console.error("Session creation error:", err);
-            return res.status(500).json({ message: "Account created but login failed" });
-          }
-          return res.json({
-            id: newUser.id,
-            email: newUser.email,
-            firstName: newUser.firstName,
-            lastName: newUser.lastName,
-            profileImageUrl: newUser.profileImageUrl,
-            createdAt: newUser.createdAt,
-            updatedAt: newUser.updatedAt
-          });
+      const token = signToken(newUser.id, newUser.email);
+      return res.json({
+        token,
+        user: {
+          id: newUser.id,
+          email: newUser.email,
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
+          profileImageUrl: newUser.profileImageUrl,
+          createdAt: newUser.createdAt,
+          updatedAt: newUser.updatedAt
         }
-      );
+      });
     } catch (error) {
       console.error("Registration error:", error);
       return res.status(500).json({ message: "Registration failed. Please try again." });
@@ -327,46 +265,27 @@ function registerCustomAuthRoutes(app2) {
       if (!passwordMatch) {
         return res.status(401).json({ message: "Invalid email or password" });
       }
-      req.login(
-        {
-          claims: { sub: user.id, email: user.email },
-          expires_at: Math.floor(Date.now() / 1e3) + 7 * 24 * 60 * 60,
-          authType: "email"
-        },
-        (err) => {
-          if (err) {
-            console.error("Session creation error:", err);
-            return res.status(500).json({ message: "Login failed. Please try again." });
-          }
-          return res.json({
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            profileImageUrl: user.profileImageUrl,
-            createdAt: user.createdAt,
-            updatedAt: user.updatedAt
-          });
+      const token = signToken(user.id, user.email);
+      return res.json({
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          profileImageUrl: user.profileImageUrl,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt
         }
-      );
+      });
     } catch (error) {
       console.error("Login error:", error);
       return res.status(500).json({ message: "Login failed. Please try again." });
     }
   });
-  app2.get("/api/auth/me", async (req, res) => {
-    const user = req.user;
-    if (!req.isAuthenticated() || !user || !user.claims) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-    if (user.authType === "email") {
-      const now = Math.floor(Date.now() / 1e3);
-      if (!user.expires_at || now > user.expires_at) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-    }
+  app2.get("/api/auth/me", isAuthenticatedCustom, async (req, res) => {
     try {
-      const userId = user.claims.sub;
+      const userId = req.user.claims.sub;
       const [dbUser] = await db.select().from(users).where(eq(users.id, userId));
       if (!dbUser) {
         return res.status(404).json({ message: "User not found" });
@@ -390,14 +309,8 @@ function registerCustomAuthRoutes(app2) {
     try {
       const userId = req.user.claims.sub;
       const { firstName, lastName } = req.body;
-      const [updated] = await db.update(users).set({
-        firstName: firstName || null,
-        lastName: lastName || null,
-        updatedAt: /* @__PURE__ */ new Date()
-      }).where(eq(users.id, userId)).returning();
-      if (!updated) {
-        return res.status(404).json({ message: "User not found" });
-      }
+      const [updated] = await db.update(users).set({ firstName: firstName || null, lastName: lastName || null, updatedAt: /* @__PURE__ */ new Date() }).where(eq(users.id, userId)).returning();
+      if (!updated) return res.status(404).json({ message: "User not found" });
       return res.json({
         id: updated.id,
         email: updated.email,
@@ -423,9 +336,7 @@ function registerCustomAuthRoutes(app2) {
         return res.status(400).json({ message: "New password must be at least 8 characters" });
       }
       const [user] = await db.select().from(users).where(eq(users.id, userId));
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
+      if (!user) return res.status(404).json({ message: "User not found" });
       if (!user.password) {
         return res.status(400).json({ message: "Password change is not available for this account type" });
       }
@@ -444,26 +355,19 @@ function registerCustomAuthRoutes(app2) {
   app2.post("/api/auth/profile-photo", isAuthenticatedCustom, (req, res) => {
     upload.single("photo")(req, res, async (err) => {
       if (err) {
-        if (err instanceof multer.MulterError) {
-          if (err.code === "LIMIT_FILE_SIZE") {
-            return res.status(400).json({ message: "File is too large. Maximum size is 5MB." });
-          }
-          return res.status(400).json({ message: err.message });
+        if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
+          return res.status(400).json({ message: "File is too large. Maximum size is 5MB." });
         }
         return res.status(400).json({ message: err.message || "Upload failed" });
       }
-      if (!req.file) {
-        return res.status(400).json({ message: "No file uploaded" });
-      }
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       try {
         const userId = req.user.claims.sub;
         const photoUrl = `/uploads/avatars/${req.file.filename}`;
         const [oldUser] = await db.select().from(users).where(eq(users.id, userId));
         if (oldUser?.profileImageUrl && oldUser.profileImageUrl.startsWith("/uploads/")) {
           const oldPath = path.join(process.cwd(), oldUser.profileImageUrl);
-          if (fs.existsSync(oldPath)) {
-            fs.unlinkSync(oldPath);
-          }
+          if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
         }
         const [updated] = await db.update(users).set({ profileImageUrl: photoUrl, updatedAt: /* @__PURE__ */ new Date() }).where(eq(users.id, userId)).returning();
         return res.json({
@@ -497,29 +401,10 @@ function registerCustomAuthRoutes(app2) {
       return res.status(500).json({ message: "Failed to update currency" });
     }
   });
-  app2.post("/api/auth/logout", (req, res) => {
-    req.logout(() => {
-      req.session.destroy((err) => {
-        if (err) {
-          console.error("Session destroy error:", err);
-        }
-        res.clearCookie("connect.sid");
-        return res.json({ message: "Logged out" });
-      });
-    });
+  app2.post("/api/auth/logout", (_req, res) => {
+    return res.json({ message: "Logged out" });
   });
 }
-var isAuthenticatedCustom = (req, res, next) => {
-  const user = req.user;
-  if (!req.isAuthenticated() || !user) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-  const now = Math.floor(Date.now() / 1e3);
-  if (user.expires_at && now <= user.expires_at) {
-    return next();
-  }
-  return res.status(401).json({ message: "Session expired" });
-};
 
 // server/routes.ts
 import { eq as eq2, and, desc } from "drizzle-orm";
@@ -1185,12 +1070,6 @@ setupLocalAuth(app);
 registerCustomAuthRoutes(app);
 registerRoutes(app);
 registerAIRoutes(app);
-app.get("/api/session-test", (req, res) => {
-  req.session.testVal = (req.session.testVal || 0) + 1;
-  req.session.save((err) => {
-    res.json({ sessionId: req.sessionID, testVal: req.session.testVal, saveErr: err?.message || null });
-  });
-});
 var isProd = process.env.NODE_ENV === "production";
 var port = isProd ? 5e3 : 3001;
 if (isProd && process.env.VERCEL !== "1") {

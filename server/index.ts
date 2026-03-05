@@ -15,13 +15,6 @@ registerCustomAuthRoutes(app);
 registerRoutes(app);
 registerAIRoutes(app);
 
-// Temporary: test session write/read
-app.get("/api/session-test", (req: any, res) => {
-  req.session.testVal = (req.session.testVal || 0) + 1;
-  req.session.save((err: any) => {
-    res.json({ sessionId: req.sessionID, testVal: req.session.testVal, saveErr: err?.message || null });
-  });
-});
 
 const isProd = process.env.NODE_ENV === "production";
 const port = isProd ? 5000 : 3001;

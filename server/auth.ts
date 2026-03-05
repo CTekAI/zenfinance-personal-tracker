@@ -3,9 +3,7 @@ import bcrypt from "bcrypt";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import session from "express-session";
-import passport from "passport";
-import { neon } from "@neondatabase/serverless";
+import jwt from "jsonwebtoken";
 import { db } from "./db";
 import { users } from "@shared/models/auth";
 import { eq } from "drizzle-orm";
@@ -39,75 +37,35 @@ const upload = multer({
 });
 
 const SALT_ROUNDS = 12;
+const JWT_EXPIRY = "7d";
 
-class NeonSessionStore extends session.Store {
-  private ttl: number;
-  private sql: ReturnType<typeof neon>;
-  constructor(ttlMs: number) {
-    super();
-    this.ttl = ttlMs;
-    this.sql = neon(process.env.DATABASE_URL!);
-  }
-  async get(sid: string, cb: Function) {
-    try {
-      const rows = await this.sql`SELECT sess, expire FROM sessions WHERE sid = ${sid}`;
-      if (!rows.length) return cb(null, null);
-      const row = rows[0];
-      if (new Date(row.expire) < new Date()) return cb(null, null);
-      cb(null, row.sess);
-    } catch (e) { console.error("[session.get]", e); cb(e); }
-  }
-  async set(sid: string, sess: any, cb: Function) {
-    try {
-      const expire = new Date(Date.now() + this.ttl).toISOString();
-      const sessJson = JSON.stringify(sess);
-      await this.sql`
-        INSERT INTO sessions (sid, sess, expire)
-        VALUES (${sid}, ${sessJson}::jsonb, ${expire}::timestamptz)
-        ON CONFLICT (sid) DO UPDATE
-        SET sess = EXCLUDED.sess, expire = EXCLUDED.expire
-      `;
-      cb(null);
-    } catch (e) { console.error("[session.set]", e); cb(e); }
-  }
-  async destroy(sid: string, cb: Function) {
-    try {
-      await this.sql`DELETE FROM sessions WHERE sid = ${sid}`;
-      cb(null);
-    } catch (e) { console.error("[session.destroy]", e); cb(e); }
-  }
-  async touch(sid: string, sess: any, cb: Function) {
-    try {
-      const expire = new Date(Date.now() + this.ttl).toISOString();
-      await this.sql`UPDATE sessions SET expire = ${expire}::timestamptz WHERE sid = ${sid}`;
-      cb(null);
-    } catch (e) { console.error("[session.touch]", e); cb(e); }
-  }
+function getJwtSecret(): string {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) throw new Error("SESSION_SECRET must be set");
+  return secret;
 }
 
-export function setupLocalAuth(app: Express) {
-  const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
-  const sessionStore = new NeonSessionStore(sessionTtl);
+function signToken(userId: string, email: string): string {
+  return jwt.sign({ sub: userId, email }, getJwtSecret(), { expiresIn: JWT_EXPIRY });
+}
 
-  app.use(
-    session({
-      secret: process.env.SESSION_SECRET!,
-      store: sessionStore,
-      resave: false,
-      saveUninitialized: false,
-      cookie: {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: sessionTtl,
-      },
-    })
-  );
+export const isAuthenticatedCustom: RequestHandler = (req: any, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  const token = authHeader.slice(7);
+  try {
+    const payload = jwt.verify(token, getJwtSecret()) as { sub: string; email: string };
+    req.user = { claims: { sub: payload.sub, email: payload.email } };
+    return next();
+  } catch {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+};
 
-  app.use(passport.initialize());
-  app.use(passport.session());
-  passport.serializeUser((user: any, cb) => cb(null, user));
-  passport.deserializeUser((user: any, cb) => cb(null, user));
+export function setupLocalAuth(_app: Express) {
+  // No-op: session setup removed, using JWT instead
 }
 
 export function registerCustomAuthRoutes(app: Express) {
@@ -134,34 +92,24 @@ export function registerCustomAuthRoutes(app: Express) {
       }
 
       const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-
       const [newUser] = await db.insert(users).values({
         email: email.toLowerCase(),
         password: hashedPassword,
       }).returning();
 
-      (req as any).login(
-        {
-          claims: { sub: newUser.id, email: newUser.email },
-          expires_at: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
-          authType: "email",
+      const token = signToken(newUser.id, newUser.email!);
+      return res.json({
+        token,
+        user: {
+          id: newUser.id,
+          email: newUser.email,
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
+          profileImageUrl: newUser.profileImageUrl,
+          createdAt: newUser.createdAt,
+          updatedAt: newUser.updatedAt,
         },
-        (err: any) => {
-          if (err) {
-            console.error("Session creation error:", err);
-            return res.status(500).json({ message: "Account created but login failed" });
-          }
-          return res.json({
-            id: newUser.id,
-            email: newUser.email,
-            firstName: newUser.firstName,
-            lastName: newUser.lastName,
-            profileImageUrl: newUser.profileImageUrl,
-            createdAt: newUser.createdAt,
-            updatedAt: newUser.updatedAt,
-          });
-        }
-      );
+      });
     } catch (error) {
       console.error("Registration error:", error);
       return res.status(500).json({ message: "Registration failed. Please try again." });
@@ -186,49 +134,28 @@ export function registerCustomAuthRoutes(app: Express) {
         return res.status(401).json({ message: "Invalid email or password" });
       }
 
-      (req as any).login(
-        {
-          claims: { sub: user.id, email: user.email },
-          expires_at: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
-          authType: "email",
+      const token = signToken(user.id, user.email!);
+      return res.json({
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          profileImageUrl: user.profileImageUrl,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
         },
-        (err: any) => {
-          if (err) {
-            console.error("Session creation error:", err);
-            return res.status(500).json({ message: "Login failed. Please try again." });
-          }
-          return res.json({
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            profileImageUrl: user.profileImageUrl,
-            createdAt: user.createdAt,
-            updatedAt: user.updatedAt,
-          });
-        }
-      );
+      });
     } catch (error) {
       console.error("Login error:", error);
       return res.status(500).json({ message: "Login failed. Please try again." });
     }
   });
 
-  app.get("/api/auth/me", async (req, res) => {
-    const user = req.user as any;
-    if (!req.isAuthenticated() || !user || !user.claims) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    if (user.authType === "email") {
-      const now = Math.floor(Date.now() / 1000);
-      if (!user.expires_at || now > user.expires_at) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-    }
-
+  app.get("/api/auth/me", isAuthenticatedCustom, async (req: any, res) => {
     try {
-      const userId = user.claims.sub;
+      const userId = req.user.claims.sub;
       const [dbUser] = await db.select().from(users).where(eq(users.id, userId));
       if (!dbUser) {
         return res.status(404).json({ message: "User not found" });
@@ -256,17 +183,11 @@ export function registerCustomAuthRoutes(app: Express) {
 
       const [updated] = await db
         .update(users)
-        .set({
-          firstName: firstName || null,
-          lastName: lastName || null,
-          updatedAt: new Date(),
-        })
+        .set({ firstName: firstName || null, lastName: lastName || null, updatedAt: new Date() })
         .where(eq(users.id, userId))
         .returning();
 
-      if (!updated) {
-        return res.status(404).json({ message: "User not found" });
-      }
+      if (!updated) return res.status(404).json({ message: "User not found" });
 
       return res.json({
         id: updated.id,
@@ -291,16 +212,12 @@ export function registerCustomAuthRoutes(app: Express) {
       if (!currentPassword || !newPassword) {
         return res.status(400).json({ message: "Current and new passwords are required" });
       }
-
       if (newPassword.length < 8) {
         return res.status(400).json({ message: "New password must be at least 8 characters" });
       }
 
       const [user] = await db.select().from(users).where(eq(users.id, userId));
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
+      if (!user) return res.status(404).json({ message: "User not found" });
       if (!user.password) {
         return res.status(400).json({ message: "Password change is not available for this account type" });
       }
@@ -311,10 +228,7 @@ export function registerCustomAuthRoutes(app: Express) {
       }
 
       const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
-      await db
-        .update(users)
-        .set({ password: hashedPassword, updatedAt: new Date() })
-        .where(eq(users.id, userId));
+      await db.update(users).set({ password: hashedPassword, updatedAt: new Date() }).where(eq(users.id, userId));
 
       return res.json({ message: "Password updated successfully" });
     } catch (error) {
@@ -326,18 +240,12 @@ export function registerCustomAuthRoutes(app: Express) {
   app.post("/api/auth/profile-photo", isAuthenticatedCustom, (req: any, res) => {
     upload.single("photo")(req, res, async (err: any) => {
       if (err) {
-        if (err instanceof multer.MulterError) {
-          if (err.code === "LIMIT_FILE_SIZE") {
-            return res.status(400).json({ message: "File is too large. Maximum size is 5MB." });
-          }
-          return res.status(400).json({ message: err.message });
+        if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
+          return res.status(400).json({ message: "File is too large. Maximum size is 5MB." });
         }
         return res.status(400).json({ message: err.message || "Upload failed" });
       }
-
-      if (!req.file) {
-        return res.status(400).json({ message: "No file uploaded" });
-      }
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
       try {
         const userId = req.user.claims.sub;
@@ -346,9 +254,7 @@ export function registerCustomAuthRoutes(app: Express) {
         const [oldUser] = await db.select().from(users).where(eq(users.id, userId));
         if (oldUser?.profileImageUrl && oldUser.profileImageUrl.startsWith("/uploads/")) {
           const oldPath = path.join(process.cwd(), oldUser.profileImageUrl);
-          if (fs.existsSync(oldPath)) {
-            fs.unlinkSync(oldPath);
-          }
+          if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
         }
 
         const [updated] = await db
@@ -394,30 +300,8 @@ export function registerCustomAuthRoutes(app: Express) {
     }
   });
 
-  app.post("/api/auth/logout", (req, res) => {
-    req.logout(() => {
-      req.session.destroy((err) => {
-        if (err) {
-          console.error("Session destroy error:", err);
-        }
-        res.clearCookie("connect.sid");
-        return res.json({ message: "Logged out" });
-      });
-    });
+  app.post("/api/auth/logout", (_req, res) => {
+    // JWT is stateless — client clears the token from localStorage
+    return res.json({ message: "Logged out" });
   });
 }
-
-export const isAuthenticatedCustom: RequestHandler = (req, res, next) => {
-  const user = req.user as any;
-
-  if (!req.isAuthenticated() || !user) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
-  const now = Math.floor(Date.now() / 1000);
-  if (user.expires_at && now <= user.expires_at) {
-    return next();
-  }
-
-  return res.status(401).json({ message: "Session expired" });
-};

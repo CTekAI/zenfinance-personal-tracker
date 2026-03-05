@@ -43,7 +43,7 @@ const EMPTY_DATA: FinanceData = {
 };
 
 const App: React.FC = () => {
-  const { user, isLoading: authLoading, isAuthenticated } = useAuth();
+  const { user, isLoading: authLoading, isAuthenticated, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('Dashboard');
   const [data, setData] = useState<FinanceData>(EMPTY_DATA);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -186,13 +186,13 @@ const App: React.FC = () => {
             ))}
           </nav>
 
-          <a
-            href="/api/logout"
-            className="flex items-center space-x-3 px-5 py-4 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-[1.25rem] transition-all duration-300 mt-4"
+          <button
+            onClick={() => logout()}
+            className="flex items-center space-x-3 px-5 py-4 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-[1.25rem] transition-[color,background-color] duration-300 mt-4 w-full"
           >
             <LogOut className="w-5 h-5" />
             <span className="font-bold text-sm tracking-tight">Sign Out</span>
-          </a>
+          </button>
 
           <div className="mt-6 p-6 bg-slate-50 rounded-[2rem] border border-slate-100">
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-3">Health Score</p>

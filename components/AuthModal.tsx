@@ -65,7 +65,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, isOpen, onClose, onSwitchMo
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ email, password }),
       });
 
@@ -77,6 +76,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, isOpen, onClose, onSwitchMo
         return;
       }
 
+      localStorage.setItem('auth_token', data.token);
       await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
       handleClose();
     } catch (err) {
