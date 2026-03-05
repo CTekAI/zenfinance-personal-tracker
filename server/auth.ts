@@ -10,7 +10,9 @@ import { db, pool } from "./db";
 import { users } from "@shared/models/auth";
 import { eq } from "drizzle-orm";
 
-const uploadsDir = path.join(process.cwd(), "uploads", "avatars");
+const uploadsDir = process.env.VERCEL === "1"
+  ? "/tmp/uploads/avatars"
+  : path.join(process.cwd(), "uploads", "avatars");
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
@@ -43,7 +45,7 @@ export function setupLocalAuth(app: Express) {
   const PgStore = connectPg(session);
   const sessionStore = new PgStore({
     conString: process.env.DATABASE_URL,
-    createTableIfMissing: false,
+    createTableIfMissing: true,
     ttl: sessionTtl / 1000, // connect-pg-simple expects seconds
     tableName: "sessions",
   });
