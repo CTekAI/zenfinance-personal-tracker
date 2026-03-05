@@ -50,7 +50,7 @@ class DrizzleSessionStore extends session.Store {
       const [row] = await db.select().from(sessions).where(eq(sessions.sid, sid));
       if (!row || row.expire < new Date()) return cb(null, null);
       cb(null, row.sess);
-    } catch (e) { cb(e); }
+    } catch (e) { console.error("[session.get]", e); cb(e); }
   }
   async set(sid: string, sess: any, cb: Function) {
     try {
@@ -58,20 +58,20 @@ class DrizzleSessionStore extends session.Store {
       await db.insert(sessions).values({ sid, sess, expire })
         .onConflictDoUpdate({ target: sessions.sid, set: { sess, expire } });
       cb(null);
-    } catch (e) { cb(e); }
+    } catch (e) { console.error("[session.set]", e); cb(e); }
   }
   async destroy(sid: string, cb: Function) {
     try {
       await db.delete(sessions).where(eq(sessions.sid, sid));
       cb(null);
-    } catch (e) { cb(e); }
+    } catch (e) { console.error("[session.destroy]", e); cb(e); }
   }
   async touch(sid: string, sess: any, cb: Function) {
     try {
       const expire = new Date(Date.now() + this.ttl);
       await db.update(sessions).set({ expire }).where(eq(sessions.sid, sid));
       cb(null);
-    } catch (e) { cb(e); }
+    } catch (e) { console.error("[session.touch]", e); cb(e); }
   }
 }
 

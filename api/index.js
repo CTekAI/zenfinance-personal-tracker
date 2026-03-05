@@ -197,6 +197,7 @@ var DrizzleSessionStore = class extends session.Store {
       if (!row || row.expire < /* @__PURE__ */ new Date()) return cb(null, null);
       cb(null, row.sess);
     } catch (e) {
+      console.error("[session.get]", e);
       cb(e);
     }
   }
@@ -206,6 +207,7 @@ var DrizzleSessionStore = class extends session.Store {
       await db.insert(sessions).values({ sid, sess, expire }).onConflictDoUpdate({ target: sessions.sid, set: { sess, expire } });
       cb(null);
     } catch (e) {
+      console.error("[session.set]", e);
       cb(e);
     }
   }
@@ -214,6 +216,7 @@ var DrizzleSessionStore = class extends session.Store {
       await db.delete(sessions).where(eq(sessions.sid, sid));
       cb(null);
     } catch (e) {
+      console.error("[session.destroy]", e);
       cb(e);
     }
   }
@@ -223,6 +226,7 @@ var DrizzleSessionStore = class extends session.Store {
       await db.update(sessions).set({ expire }).where(eq(sessions.sid, sid));
       cb(null);
     } catch (e) {
+      console.error("[session.touch]", e);
       cb(e);
     }
   }
@@ -1171,6 +1175,12 @@ setupLocalAuth(app);
 registerCustomAuthRoutes(app);
 registerRoutes(app);
 registerAIRoutes(app);
+app.get("/api/session-test", (req, res) => {
+  req.session.testVal = (req.session.testVal || 0) + 1;
+  req.session.save((err) => {
+    res.json({ sessionId: req.sessionID, testVal: req.session.testVal, saveErr: err?.message || null });
+  });
+});
 var isProd = process.env.NODE_ENV === "production";
 var port = isProd ? 5e3 : 3001;
 if (isProd && process.env.VERCEL !== "1") {
