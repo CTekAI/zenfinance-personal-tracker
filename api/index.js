@@ -1135,29 +1135,10 @@ My question: ${question}`;
 var app = express();
 app.use(express.json());
 app.use("/uploads", express.static(path2.join(process.cwd(), "uploads")));
-app.get("/api/debug", (_req, res) => {
-  res.json({
-    NODE_ENV: process.env.NODE_ENV,
-    VERCEL: process.env.VERCEL,
-    HAS_DATABASE_URL: !!process.env.DATABASE_URL,
-    HAS_SESSION_SECRET: !!process.env.SESSION_SECRET,
-    HAS_OPENAI_KEY: !!process.env.OPENAI_API_KEY
-  });
-});
-var initError = null;
-try {
-  setupLocalAuth(app);
-  registerCustomAuthRoutes(app);
-  registerRoutes(app);
-  registerAIRoutes(app);
-} catch (e) {
-  initError = e;
-  console.error("App initialization error:", e);
-}
-app.use((req, res, next) => {
-  if (initError) return res.status(500).json({ error: "Init failed", message: initError.message, stack: initError.stack });
-  next();
-});
+setupLocalAuth(app);
+registerCustomAuthRoutes(app);
+registerRoutes(app);
+registerAIRoutes(app);
 var isProd = process.env.NODE_ENV === "production";
 var port = isProd ? 5e3 : 3001;
 if (isProd && process.env.VERCEL !== "1") {
