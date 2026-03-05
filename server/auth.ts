@@ -5,8 +5,9 @@ import path from "path";
 import fs from "fs";
 import session from "express-session";
 import passport from "passport";
+import { neon } from "@neondatabase/serverless";
 import { db } from "./db";
-import { users, sessions } from "@shared/models/auth";
+import { users } from "@shared/models/auth";
 import { eq } from "drizzle-orm";
 
 const uploadsDir = process.env.VERCEL === "1"
@@ -39,37 +40,46 @@ const upload = multer({
 
 const SALT_ROUNDS = 12;
 
-class DrizzleSessionStore extends session.Store {
+class NeonSessionStore extends session.Store {
   private ttl: number;
+  private sql: ReturnType<typeof neon>;
   constructor(ttlMs: number) {
     super();
     this.ttl = ttlMs;
+    this.sql = neon(process.env.DATABASE_URL!);
   }
   async get(sid: string, cb: Function) {
     try {
-      const [row] = await db.select().from(sessions).where(eq(sessions.sid, sid));
-      if (!row || row.expire < new Date()) return cb(null, null);
+      const rows = await this.sql`SELECT sess, expire FROM sessions WHERE sid = ${sid}`;
+      if (!rows.length) return cb(null, null);
+      const row = rows[0];
+      if (new Date(row.expire) < new Date()) return cb(null, null);
       cb(null, row.sess);
     } catch (e) { console.error("[session.get]", e); cb(e); }
   }
   async set(sid: string, sess: any, cb: Function) {
     try {
-      const expire = new Date(Date.now() + this.ttl);
-      await db.insert(sessions).values({ sid, sess, expire })
-        .onConflictDoUpdate({ target: sessions.sid, set: { sess, expire } });
+      const expire = new Date(Date.now() + this.ttl).toISOString();
+      const sessJson = JSON.stringify(sess);
+      await this.sql`
+        INSERT INTO sessions (sid, sess, expire)
+        VALUES (${sid}, ${sessJson}::jsonb, ${expire}::timestamptz)
+        ON CONFLICT (sid) DO UPDATE
+        SET sess = EXCLUDED.sess, expire = EXCLUDED.expire
+      `;
       cb(null);
     } catch (e) { console.error("[session.set]", e); cb(e); }
   }
   async destroy(sid: string, cb: Function) {
     try {
-      await db.delete(sessions).where(eq(sessions.sid, sid));
+      await this.sql`DELETE FROM sessions WHERE sid = ${sid}`;
       cb(null);
     } catch (e) { console.error("[session.destroy]", e); cb(e); }
   }
   async touch(sid: string, sess: any, cb: Function) {
     try {
-      const expire = new Date(Date.now() + this.ttl);
-      await db.update(sessions).set({ expire }).where(eq(sessions.sid, sid));
+      const expire = new Date(Date.now() + this.ttl).toISOString();
+      await this.sql`UPDATE sessions SET expire = ${expire}::timestamptz WHERE sid = ${sid}`;
       cb(null);
     } catch (e) { console.error("[session.touch]", e); cb(e); }
   }
@@ -77,7 +87,7 @@ class DrizzleSessionStore extends session.Store {
 
 export function setupLocalAuth(app: Express) {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
-  const sessionStore = new DrizzleSessionStore(sessionTtl);
+  const sessionStore = new NeonSessionStore(sessionTtl);
 
   app.use(
     session({
